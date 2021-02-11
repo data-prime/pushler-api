@@ -1,0 +1,6 @@
+{
+  "name": "simplepush",
+  "description": "Simple push Heroku.",
+  "image": "heroku/java",
+  "addons": [ "heroku-postgresql" ]
+}
