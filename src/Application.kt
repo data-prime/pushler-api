@@ -56,6 +56,7 @@ public object Main {
         FirebaseApp.initializeApp(options);
         io.ktor.server.netty.EngineMain.main(args)
     }
+
 }
 
 
@@ -97,7 +98,7 @@ fun Application.module(testing: Boolean = false) {
         /// Authorization
         // response success {result : bool, token : string, id : string}
         // response error {result : bool, message : string}
-        post("/authorization") {
+        post("/auth") {
             try {
                 val receive = call.receive<Parameters>()
                 val token = call.request.header("Authorization")
@@ -136,27 +137,29 @@ fun Application.module(testing: Boolean = false) {
             }
         }
 
-        /// channel
-        // get channel from you header uuid channel
-        // headers - [Access : channel_uuid]
-        // response success {result : bool, channel : {
+        // get all channels if you have admin permission
+        // headers - [Access : admin_key]
+        // response success {result : bool, channels : [{
         //  id : uuid, tag : String, name : String, public : bool, pathURL : String?, imageURL : String?, createAt : Date, changeAt : Date
-        // }}
+        //}]}
         // response error {result : bool, message : string}
-        post("/channel") {
+        get("/channels") {
             try {
-                val channel = call.request.header("Access")?.let { channelDataSource.get(it) }
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                    return@post
+                val receive = call.receive<Parameters>()
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
                 }
-                call.respondText(Gson().toJson(mapOf("result" to true, "channel" to channel)), ContentType.Application.Json, HttpStatusCode.OK)
 
+                // return the channels owned by the user
+
+                val channels = channelDataSource.getAll()
+                call.respondText(Gson().toJson(mapOf("result" to true, "channels" to channels)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
+
 
         // create channel if you have admin permission
         // headers - [Access : admin_key]
@@ -170,29 +173,57 @@ fun Application.module(testing: Boolean = false) {
         // ]
         // response success {result : bool, uuid : String}
         // response error {result : bool, message : String}
-        post("/channel/create") {
+        post("/channels") {
             try {
                 val receive = call.receive<Parameters>()
-                val admin : Boolean = call.request.header("Access")?.let {
-                    it == JwtConfig.adminKey
-                } == true
-
-                if (!admin) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "no permission 2")), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
                 }
+
+                // add channel owner
 
                 val channel = Channel(
                     tag = receive["tag"]!!,
                     name = receive["name"]!!,
                     imageURL = receive["imageURL"],
                     pathURL = receive["pathURL"],
-                    public = false
+                    public = false,
                 )
+
+
 
                 channelDataSource.create(channel)
 
                 call.respondText(Gson().toJson(mapOf("result" to true, "uuid" to channel.id.toString())), ContentType.Application.Json, HttpStatusCode.OK)
+            } catch (e : Exception) {
+                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+            }
+        }
+
+        /// channel
+        // get channel from you header uuid channel
+        // headers - [Access : channel_uuid]
+        // response success {result : bool, channel : {
+        //  id : uuid, tag : String, name : String, public : bool, pathURL : String?, imageURL : String?, createAt : Date, changeAt : Date
+        // }}
+        // response error {result : bool, message : string}
+        get("/channels/{channel}") {
+            try {
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
+                }
+                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                // if user is not owner return
+
+                if (channel == null) {
+                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    return@get
+                }
+                call.respondText(Gson().toJson(mapOf("result" to true, "channel" to channel)), ContentType.Application.Json, HttpStatusCode.OK)
+
             } catch (e : Exception) {
                 call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
@@ -205,81 +236,25 @@ fun Application.module(testing: Boolean = false) {
         // ]
         // response success {result : bool}
         // response error {result : bool, message : string}
-        post("/channel/delete") {
+        delete("/channels/{channel}") {
             try {
                 val receive = call.receive<Parameters>()
-                val admin : Boolean = call.request.header("Access")?.let {
-                    it == JwtConfig.adminKey
-                } == true
-
-                if (!admin) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "no permission 2")), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
                 }
 
-                channelDataSource.delete(receive["uuid"]!!)
-                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
+                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
-        // get all channels if you have admin permission
-        // headers - [Access : admin_key]
-        // response success {result : bool, channels : [{
-        //  id : uuid, tag : String, name : String, public : bool, pathURL : String?, imageURL : String?, createAt : Date, changeAt : Date
-        //}]}
-        // response error {result : bool, message : string}
-        post("/channel/list") {
-            try {
-                val receive = call.receive<Parameters>()
-
-                val admin : Boolean = call.request.header("Access")?.let {
-                    it == JwtConfig.adminKey
-                } == true
-
-                if (!admin) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "no permission 2")), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-                val channels = channelDataSource.getAll()
-                call.respondText(Gson().toJson(mapOf("result" to true, "channels" to channels)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        // get channel from uuid if you have admin permission
-        // headers - [Access : admin_key]
-        // response success {result : bool, channel : {
-        //  id : uuid, tag : String, name : String, public : bool, pathURL : String?, imageURL : String?, createAt : Date, changeAt : Date
-        // }}
-        // response error {result : bool, message : string}
-        post("/channel/list/{uuid}") {
-            try {
-                val receive = call.receive<Parameters>()
-                val admin : Boolean = call.request.header("Access")?.let {
-                    it == JwtConfig.adminKey
-                } == true
-
-                if (!admin) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "no permission 2")), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-                val channel = call.parameters["uuid"]?.let { channelDataSource.get(it) }
-
-
-
+                // if user is not owner return
 
                 if (channel == null) {
                     call.respondText(Gson().toJson(mapOf("result" to false, "message" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                    return@post
+                    return@delete
                 }
 
-                call.respondText(Gson().toJson(mapOf("result" to true, "channel" to channel)), ContentType.Application.Json, HttpStatusCode.OK)
-
+                channelDataSource.delete(channel.id.toString())
+                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
                 call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
@@ -287,14 +262,21 @@ fun Application.module(testing: Boolean = false) {
 
         // get all sessions from channel from you header uuid channel
         // headers - [Access : channel_uuid]
-        post("/channel/session/list") {
+        get("/channels/{channel}/sessions") {
             try {
                 val receive = call.receive<Parameters>()
-                val channel = call.request.header("Access")?.let { channelDataSource.get(it) }
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
+                }
+
+                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                // if user is not owner return
 
                 if (channel == null) {
                     call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
+                    return@get
                 }
 
                 val subscribers = mutableListOf<Subscriber>()
@@ -322,18 +304,25 @@ fun Application.module(testing: Boolean = false) {
         // required params [
         //     uuid : String
         // ]
-        post("/channel/session/list/{uuid}") {
+        get("/channels/{channel}/sessions/{session}") {
             try {
                 val receive = call.receive<Parameters>()
-                val channel = call.request.header("Access")?.let { channelDataSource.get(it) }
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
+                }
+
+                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                // if user is not owner return
 
                 if (channel == null) {
                     call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
+                    return@get
                 }
 
                 val subscribers = mutableListOf<Subscriber>()
-                val sessions = sessionDataSource.get(call.parameters["uuid"]!!)
+                val sessions = call.parameters["session"]?.let { sessionDataSource.get(it) }
 
                 sessions?.let { session ->
                     session.subscriptions.filter { it.contains("${channel.tag}#") }.forEach { tag ->
@@ -348,6 +337,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true, "subscribers" to subscribers)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
+                e.printStackTrace()
                 call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
@@ -355,10 +345,17 @@ fun Application.module(testing: Boolean = false) {
         // invite from channel from you header uuid channel
         // headers - [Access : channel_uuid]
         // required params [session : uuid, id : String]
-        post("/channel/invite") {
+        post("/channels/{channel}/invite") {
             try {
                 val receive = call.receive<Parameters>()
-                val channel = call.request.header("Access")?.let { channelDataSource.get(it) }
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
+                }
+
+                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                // if user is not owner return
 
                 if (channel == null) {
                     call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
@@ -399,10 +396,17 @@ fun Application.module(testing: Boolean = false) {
         // subscribe from channel if it public from you header uuid channel
         // headers - [Access : channel_uuid]
         // required params [session : uuid, id : String]
-        post("/channel/subscribe") {
+        post("/channels/{channel}/subscribe") {
             try {
                 val receive = call.receive<Parameters>()
-                val channel = call.request.header("Access")?.let { channelDataSource.get(it) }
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
+                }
+
+                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                // if user is not owner return
 
                 if (channel == null) {
                     call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
@@ -418,10 +422,17 @@ fun Application.module(testing: Boolean = false) {
         // unsubscribe from channel from you header uuid channel
         // headers - [Access : channel_uuid]
         // required params [session : uuid]
-        post("/channel/unsubscribe") {
+        post("/channels/{channel}/unsubscribe") {
             try {
                 val receive = call.receive<Parameters>()
-                val channel = call.request.header("Access")?.let { channelDataSource.get(it) }
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
+                }
+
+                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                // if user is not owner return
 
                 if (channel == null) {
                     call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
@@ -439,40 +450,16 @@ fun Application.module(testing: Boolean = false) {
         }
 
         /// session
-        // get session from uuid if you have admin permission
-        // headers - [Access : admin_key]
-        post("/session/list/{uuid}") {
-            try {
-
-                val admin : Boolean = call.request.header("Access")?.let {
-                    it == JwtConfig.adminKey
-                } == true
-
-                if (!admin) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "no permission 2")), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-                val session = sessionDataSource.get(call.parameters["uuid"]!!)!!
-                call.respondText(Gson().toJson(mapOf("result" to true, "session" to session)), ContentType.Application.Json, HttpStatusCode.OK)
-
-            } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
         // get all sessions list if you have admin permission
         // headers - [Access : admin_key]
-        post("/session/list") {
+        get("/sessions") {
             try {
-                val admin : Boolean = call.request.header("Access")?.let {
-                    it == JwtConfig.adminKey
-                } == true
-
-                if (!admin) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "no permission 2")), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
+                val user = call.request.header("Authorization")?.let {
+                    // return user
+                    return@let null
                 }
+
+                // if user is not admin return
 
                 val sessions = sessionDataSource.getAll()
                 call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)
@@ -482,67 +469,10 @@ fun Application.module(testing: Boolean = false) {
             }
         }
 
-        // set fcm token to session
-        // headers - [Authorization : session_jwt]
-        // required params [
-        //     fcm : fcm_token
-        // ]
-        authenticate {
-            post("/session/fcm") {
-                try {
-                    val receive = call.receive<Parameters>()
-                    val session = call.principal<Session>()!!
-                    sessionDataSource.insertFCM(receive["fcm"]!!, session)
-                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-                } catch (e : Exception) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                }
-            }
-        }
-
-        // subscribe session to channel tag
-        // headers - [Authorization : session_jwt]
-        // required params [
-        //     tag : subscribe_tag
-        // ]
-        authenticate {
-            post("/session/subscribe") {
-                try {
-                    val session = call.principal<Session>()!!
-                    val receive = call.receive<Parameters>()
-
-                    sessionDataSource.insertTag(receive["tag"]!!, session)
-                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-                } catch (e : Exception) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                }
-            }
-        }
-
-        // unsubscribe session to channel tag
-        // headers - [Authorization : session_jwt]
-        // required params [
-        //     tag : subscribe_tag
-        // ]
-        authenticate {
-            post("/session/unsubscribe") {
-                try {
-                    val receive = call.receive<Parameters>()
-                    val session = call.principal<Session>()!!
-
-
-                    sessionDataSource.removeTag(receive["tag"]!!, session)
-                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-                } catch (e : Exception) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                }
-            }
-        }
-
         // get notifications and subscriptions from session
         // headers - [Authorization : session_jwt]
         authenticate {
-            post("/session/fetch") {
+            get("/sessions/fetch") {
                 try {
                     val receive = call.receive<Parameters>()
                     val session = call.principal<Session>()!!
@@ -583,6 +513,65 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
         }
+
+        // set fcm token to session
+        // headers - [Authorization : session_jwt]
+        // required params [
+        //     fcm : fcm_token
+        // ]
+        authenticate {
+            post("/sessions/fcm") {
+                try {
+                    val receive = call.receive<Parameters>()
+                    val session = call.principal<Session>()!!
+                    sessionDataSource.insertFCM(receive["fcm"]!!, session)
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+        }
+
+        // subscribe session to channel tag
+        // headers - [Authorization : session_jwt]
+        // required params [
+        //     tag : subscribe_tag
+        // ]
+        authenticate {
+            post("/sessions/subscribe") {
+                try {
+                    val session = call.principal<Session>()!!
+                    val receive = call.receive<Parameters>()
+
+                    sessionDataSource.insertTag(receive["tag"]!!, session)
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+        }
+
+        // unsubscribe session to channel tag
+        // headers - [Authorization : session_jwt]
+        // required params [
+        //     tag : subscribe_tag
+        // ]
+        authenticate {
+            post("/sessions/unsubscribe") {
+                try {
+                    val receive = call.receive<Parameters>()
+                    val session = call.principal<Session>()!!
+
+
+                    sessionDataSource.removeTag(receive["tag"]!!, session)
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+        }
+
+
 
         /// push
         // push notification to tag
