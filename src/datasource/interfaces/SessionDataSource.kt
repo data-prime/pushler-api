@@ -1,16 +1,24 @@
-package me.simplepush.datasource.interfaces
+package com.pushler.datasource.interfaces
 
-import me.simplepush.dto.Session
+import com.pushler.dto.Session
 import java.util.*
 
 interface SessionDataSource {
 
-    fun getSession(uuid: String) : Session?
+    fun create() : Session
 
-    fun getSessionsFromTag(tag: String) : List<Session>
+    fun get(uuid: String) : Session?
 
-    fun insertSession(firebase: String) : Session
+    fun getFromTag(tag: String) : List<Session>
+
+    fun getAll() : List<Session>
+
+    fun insertFCM(fcm: String, session : Session)
 
     fun insertTag(tag: String, session : Session)
+
+    fun removeTag(tag: String, session : Session)
+
+
 
 }

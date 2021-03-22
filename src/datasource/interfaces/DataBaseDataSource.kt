@@ -1,4 +1,4 @@
-package me.simplepush.datasource.interfaces
+package com.pushler.datasource.interfaces
 
 interface DataBaseDataSource {
     fun connect()

@@ -1,4 +1,4 @@
-package me.simplepush
+package com.pushler
 
 import io.ktor.application.*
 import io.ktor.response.*

@@ -1,4 +1,4 @@
-package me.simplepush.datasource.extensions
+package com.pushler.datasource.extensions
 
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.ColumnType

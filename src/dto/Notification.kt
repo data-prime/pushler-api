@@ -1,5 +1,6 @@
-package me.simplepush.dto
+package com.pushler.dto
 
+import org.joda.time.DateTime
 import java.util.*
 
 data class Notification(
@@ -9,4 +10,5 @@ data class Notification(
     val body: String? = null,
     val imageURL: String? = null,
     val data: Map<String, String> = mapOf(),
+    val createAt: String = DateTime.now().toString(),
 )

@@ -1,7 +1,8 @@
-package me.simplepush.datasource.tables
+package com.pushler.datasource.tables
 
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
+import org.joda.time.DateTime
 import java.util.*
 
 
@@ -12,4 +13,5 @@ object Notifications : Table() {
     val body: Column<String?> = text("body").nullable()
     val imageURL: Column<String?> = text("imageURL").nullable()
     val data: Column<String?> = text("data").nullable()
+    val createAt: Column<DateTime> = datetime("create_at")
 }

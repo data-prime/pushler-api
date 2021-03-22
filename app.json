@@ -1,6 +1,6 @@
 {
-  "name": "simplepush",
-  "description": "Simple push Heroku.",
+  "name": "pushler-api",
+  "description": "Pushler-api Heroku.",
   "image": "heroku/java",
   "addons": [ "heroku-postgresql" ]
 }

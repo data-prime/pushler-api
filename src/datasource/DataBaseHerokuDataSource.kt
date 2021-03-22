@@ -1,10 +1,11 @@
-package me.simplepush.datasource
+package com.pushler.datasource
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import me.simplepush.datasource.interfaces.DataBaseDataSource
-import me.simplepush.datasource.tables.Notifications
-import me.simplepush.datasource.tables.Sessions
+import com.pushler.datasource.interfaces.DataBaseDataSource
+import com.pushler.datasource.tables.Notifications
+import com.pushler.datasource.tables.Channels
+import com.pushler.datasource.tables.Sessions
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -21,6 +22,7 @@ class DataBaseHerokuDataSource() : DataBaseDataSource {
         transaction {
             SchemaUtils.create(Sessions)
             SchemaUtils.create(Notifications)
+            SchemaUtils.create(Channels)
         }
     }
 

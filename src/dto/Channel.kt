@@ -4,10 +4,13 @@ import io.ktor.auth.*
 import org.joda.time.DateTime
 import java.util.*
 
-data class Session(
+data class Channel(
     val id: UUID = UUID.randomUUID(),
-    val fcm: String? = null,
-    val subscriptions: List<String> = listOf(),
+    val tag: String,
+    val name: String,
+    val public: Boolean,
+    val pathURL: String?,
+    val imageURL: String?,
     val createAt : String = DateTime.now().toString(),
     val changeAt : String = DateTime.now().toString(),
 ) : Principal

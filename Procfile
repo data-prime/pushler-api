@@ -1,1 +1,1 @@
-web: ./build/install/simplepush/bin/simplepush
+web: ./build/install/pushler-api/bin/pushler-api

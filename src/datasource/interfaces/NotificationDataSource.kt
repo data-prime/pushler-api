@@ -1,12 +1,12 @@
-package me.simplepush.datasource.interfaces
+package com.pushler.datasource.interfaces
 
-import me.simplepush.datasource.tables.Notifications
-import me.simplepush.dto.Notification
+import com.pushler.datasource.tables.Notifications
+import com.pushler.dto.Notification
 
 interface NotificationDataSource {
 
-    fun getNotifications(tag: String) : List<Notification>
+    fun getNotifications(recipient: String) : List<Notification>
 
-    fun pushNotification(recipientTag: String, notification : Notification)
+    fun pushNotification(notification : Notification)
 
 }
