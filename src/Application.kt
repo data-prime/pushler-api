@@ -85,8 +85,10 @@ fun Application.module(testing: Boolean = false) {
         header(HttpHeaders.AccessControlAllowHeaders)
         header(HttpHeaders.ContentType)
         header(HttpHeaders.AccessControlAllowOrigin)
+        header(HttpHeaders.XForwardedProto)
         allowCredentials = true
         anyHost()
+        host("localhost:8080")
     }
 
     routing {
