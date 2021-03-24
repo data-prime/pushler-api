@@ -76,7 +76,7 @@ fun Application.module(testing: Boolean = false) {
     }
 
     install(CORS) {
-        method(HttpMethod.Options)
+//        method(HttpMethod.Options)
         method(HttpMethod.Get)
         method(HttpMethod.Post)
         method(HttpMethod.Put)
@@ -92,13 +92,17 @@ fun Application.module(testing: Boolean = false) {
     }
 
     install(DefaultHeaders) {
-        header(HttpHeaders.AccessControlAllowHeaders, "*")
+        header(HttpHeaders.AccessControlAllowOrigin, "*")
     }
 
     routing {
 
         get("/partner/success") {
             call.respondText("Success")
+        }
+
+        options("*") {
+            call.respondText("")
         }
 
         /// Authorization
