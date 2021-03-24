@@ -28,8 +28,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.*
 
-
 var database: DataBaseDataSource = DataBaseHerokuDataSource();
+//var database: DataBaseDataSource = DataBaseLocalDataSource();
 var notificationDataSource: NotificationDataSource = NotificationPostgresqlDataSource()
 var sessionDataSource: SessionDataSource = SessionPostgresqlDataSource()
 var channelDataSource: ChannelDataSource = ChannelPostgresqlDataSource()
@@ -84,12 +84,15 @@ fun Application.module(testing: Boolean = false) {
         method(HttpMethod.Patch)
         header(HttpHeaders.AccessControlAllowHeaders)
         header(HttpHeaders.ContentType)
-        header(HttpHeaders.AccessControlAllowOrigin)
         exposeHeader(HttpHeaders.AccessControlAllowOrigin)
         header(HttpHeaders.XForwardedProto)
         allowCredentials = true
         allowNonSimpleContentTypes = true
         anyHost()
+    }
+
+    install(DefaultHeaders) {
+        header(HttpHeaders.AccessControlAllowHeaders, "*")
     }
 
     routing {
@@ -155,7 +158,6 @@ fun Application.module(testing: Boolean = false) {
                 }
 
                 // return the channels owned by the user
-
                 val channels = channelDataSource.getAll()
                 call.respondText(Gson().toJson(mapOf("result" to true, "channels" to channels)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
