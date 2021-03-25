@@ -5,6 +5,7 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import org.mindrot.jbcrypt.BCrypt
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.Message
 import com.google.gson.Gson
@@ -28,8 +29,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.*
 
-var database: DataBaseDataSource = DataBaseHerokuDataSource();
-//var database: DataBaseDataSource = DataBaseLocalDataSource();
+//var database: DataBaseDataSource = DataBaseHerokuDataSource();
+var database: DataBaseDataSource = DataBaseLocalDataSource();
 var notificationDataSource: NotificationDataSource = NotificationPostgresqlDataSource()
 var sessionDataSource: SessionDataSource = SessionPostgresqlDataSource()
 var channelDataSource: ChannelDataSource = ChannelPostgresqlDataSource()
@@ -96,6 +97,22 @@ fun Application.module(testing: Boolean = false) {
     }
 
     routing {
+        post("/user") {
+            val params = call.receive<Parameters>()
+//            if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
+//                call.respondText(Gson().toJson(mapOf("result" to false, "message" to "invalid params")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+//            }
+            try {
+                val user = User(
+                    name = params["username"]!!,
+                    hash = BCrypt.hashpw(params["password"]!!, BCrypt.gensalt()),
+                )
+
+                call.respondText(Gson().toJson(mapOf("result" to true, "hash" to user.hash)), ContentType.Application.Json, HttpStatusCode.OK)
+            } catch (e : Exception) {
+                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+            }
+        }
 
         get("/partner/success") {
             call.respondText("Success")

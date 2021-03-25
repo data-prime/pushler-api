@@ -48,6 +48,8 @@ dependencies {
 
     // oauth jwt
     compile "io.ktor:ktor-auth-jwt:$ktor_version"
+
+    compile 'org.mindrot:jbcrypt:0.4'
 }
 
 
