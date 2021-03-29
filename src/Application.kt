@@ -29,8 +29,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.*
 
-//var database: DataBaseDataSource = DataBaseHerokuDataSource();
-var database: DataBaseDataSource = DataBaseLocalDataSource();
+var database: DataBaseDataSource = DataBaseHerokuDataSource();
+//var database: DataBaseDataSource = DataBaseLocalDataSource();
 var notificationDataSource: NotificationDataSource = NotificationPostgresqlDataSource()
 var sessionDataSource: SessionDataSource = SessionPostgresqlDataSource()
 var channelDataSource: ChannelDataSource = ChannelPostgresqlDataSource()
