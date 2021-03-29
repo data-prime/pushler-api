@@ -29,7 +29,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.*
 
-var database: DataBaseDataSource = DataBaseHerokuDataSource();
+lateinit var database: DataBaseDataSource
+
 //var database: DataBaseDataSource = DataBaseLocalDataSource();
 var notificationDataSource: NotificationDataSource = NotificationPostgresqlDataSource()
 var sessionDataSource: SessionDataSource = SessionPostgresqlDataSource()
@@ -43,6 +44,7 @@ public object Main {
 
     @JvmStatic
     fun main(args: Array<String>): Unit {
+        database = if (System.getenv("MODE") == "prod") DataBaseHerokuDataSource() else DataBaseLocalDataSource()
         database.connect()
 
 
@@ -116,9 +118,9 @@ fun Application.module(testing: Boolean = false) {
             call.respondText("Success")
         }
 
-        options("*") {
-            call.respondText("")
-        }
+//        options("*") {
+//            call.respondText("")
+//        }
 
         /// Authorization
         // response success {result : bool, token : string, id : string}
@@ -170,7 +172,7 @@ fun Application.module(testing: Boolean = false) {
         // response error {result : bool, message : string}
         get("/channels") {
             try {
-                val receive = call.receive<Parameters>()
+//                val receive = call.receive<Parameters>()
                 val user = call.request.header("Authorization")?.let {
                     // return user
                     return@let null
@@ -178,9 +180,13 @@ fun Application.module(testing: Boolean = false) {
 
                 // return the channels owned by the user
                 val channels = channelDataSource.getAll()
-                call.respondText(Gson().toJson(mapOf("result" to true, "channels" to channels)), ContentType.Application.Json, HttpStatusCode.OK)
+                call.respondText(Gson().toJson(channels), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(
+                    Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                    ContentType.Application.Json,
+                    HttpStatusCode.BadRequest
+                )
             }
         }
 
