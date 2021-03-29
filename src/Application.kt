@@ -77,7 +77,7 @@ fun Application.module(testing: Boolean = false) {
     }
 
     install(CORS) {
-//        method(HttpMethod.Options)
+        method(HttpMethod.Options)
         method(HttpMethod.Get)
         method(HttpMethod.Post)
         method(HttpMethod.Put)
@@ -92,17 +92,15 @@ fun Application.module(testing: Boolean = false) {
         anyHost()
     }
 
-    install(DefaultHeaders) {
-        header(HttpHeaders.AccessControlAllowOrigin, "*")
-    }
-
     routing {
         post("/user") {
             val params = call.receive<Parameters>()
-//            if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
-//                call.respondText(Gson().toJson(mapOf("result" to false, "message" to "invalid params")), ContentType.Application.Json, HttpStatusCode.BadRequest)
-//            }
+
             try {
+                if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
+                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "invalid params")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    return@post
+                }
                 val user = User(
                     name = params["username"]!!,
                     hash = BCrypt.hashpw(params["password"]!!, BCrypt.gensalt()),
