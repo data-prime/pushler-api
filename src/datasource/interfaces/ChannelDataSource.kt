@@ -6,8 +6,6 @@ interface ChannelDataSource {
 
     fun get(uuid : String) : Channel?
 
-    fun getFromTag(tag : String) : Channel?
-
     fun getAll() : List<Channel>
 
     fun create(channel: Channel)

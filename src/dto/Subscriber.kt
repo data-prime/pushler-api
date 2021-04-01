@@ -1,8 +1,12 @@
 package com.pushler.dto
 
-import java.util.*
+import org.jetbrains.exposed.dao.EntityID
+import org.joda.time.DateTime
 
 data class Subscriber(
-    val id: String,
-    val tag: String,
+    val id: Int,
+    val session: Session,
+    val channel: Channel,
+    val tag: String?,
+    val createAt: String = DateTime.now().toString(),
 )

@@ -6,7 +6,6 @@ import java.util.*
 
 data class Channel(
     val id: UUID = UUID.randomUUID(),
-    val tag: String,
     val name: String,
     val public: Boolean,
     val pathURL: String?,

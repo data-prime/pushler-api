@@ -1,7 +1,8 @@
 package com.pushler.datasource.interfaces
 
+import com.pushler.dto.Channel
 import com.pushler.dto.Session
-import java.util.*
+import com.pushler.dto.Subscriber
 
 interface SessionDataSource {
 
@@ -9,16 +10,23 @@ interface SessionDataSource {
 
     fun get(uuid: String) : Session?
 
-    fun getFromTag(tag: String) : List<Session>
+    fun getSubscriber(channel: Channel) : List<Subscriber>
+
+    fun getSubscriber(channel: Channel, tag : String) : List<Subscriber>
+
+    fun getSubscriber(channel: Channel, session: Session) : List<Subscriber>
+
+    fun getSubscriber(channel: Channel, session: Session, tag : String) : Subscriber?
+
+    fun getSubscriber(session: Session) : List<Subscriber>
 
     fun getAll() : List<Session>
 
     fun insertFCM(fcm: String, session : Session)
 
-    fun insertTag(tag: String, session : Session)
+    fun subscribe(session : Session, channel : Channel, tag: String?)
 
-    fun removeTag(tag: String, session : Session)
-
+    fun unsubscribe(session : Session, channel : Channel, tag: String?)
 
 
 }
