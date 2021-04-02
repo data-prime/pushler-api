@@ -329,7 +329,16 @@ fun Application.module(testing: Boolean = false) {
                     return@post
                 }
 
+
+
                 sessionDataSource.get(receive["session"]!!)?.let { session ->
+
+
+                    val subscriber = sessionDataSource.getSubscriber(channel,session, receive["tag"].toString())
+                    if (subscriber != null) {
+                        throw Exception("session is already subscribed")
+                    }
+
                     session.fcm?.let { token ->
 
                         val message: Message = Message.builder()
