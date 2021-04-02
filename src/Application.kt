@@ -177,7 +177,6 @@ fun Application.module(testing: Boolean = false) {
             }
         }
 
-
         post("/channels") {
             try {
                 val receive = call.receive<Parameters>()
@@ -343,6 +342,7 @@ fun Application.module(testing: Boolean = false) {
                             )
                             .putData("action", "invite")
                             .putData("target", receive["tag"])
+                            .putData("channel_name", channel.name)
                             .putData("channel", channel.id.toString())
                             .build()
 
