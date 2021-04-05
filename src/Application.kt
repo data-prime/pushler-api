@@ -106,29 +106,6 @@ fun Application.module(testing: Boolean = false) {
     }
 
     routing {
-        authenticate("userAuth") {
-            post("/user") {
-                try {
-                    val params = call.receive<Parameters>()
-                    if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
-                        call.respondText(Gson().toJson(mapOf("result" to false, "error" to "invalid params")), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                        return@post
-                    }
-                    val user = User(
-                        name = params["username"]!!,
-                        hash = BCrypt.hashpw(params["password"]!!, BCrypt.gensalt()),
-                    )
-
-                    userDataSource.create(user)
-
-                    call.respondText(Gson().toJson(user), ContentType.Application.Json, HttpStatusCode.OK)
-                } catch (e : Exception) {
-                    e.printStackTrace()
-                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                }
-            }
-        }
-
         post("/user/login") {
             try {
                 val params = call.receive<Parameters>()
@@ -165,8 +142,65 @@ fun Application.module(testing: Boolean = false) {
             }
         }
 
+        authenticate("userAuth") {
+            get ("/user/test") {
+                call.response.status(HttpStatusCode.OK)
+            }
+            post("/user") {
+                try {
+                    val params = call.receive<Parameters>()
+                    if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@post
+                    }
+                    val user = User(
+                        name = params["username"]!!,
+                        hash = BCrypt.hashpw(params["password"]!!, BCrypt.gensalt()),
+                    )
+
+                    userDataSource.create(user)
+
+                    call.respondText(Gson().toJson(user), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                }
+            }
+            delete("/user") {
+                try {
+                    val params = call.receive<Parameters>()
+                    if (params["id"].isNullOrBlank()) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@delete
+                    }
+                    userDataSource.delete(params["id"].toString())
+                    call.response.status(HttpStatusCode.NoContent)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                }
+            }
+        }
+
+
         get("/partner/success") {
-            call.respondText("Success")
+
         }
 
 

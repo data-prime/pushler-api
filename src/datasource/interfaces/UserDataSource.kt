@@ -14,6 +14,6 @@ interface UserDataSource {
 //
 //    fun getAll() : List<User>
 //
-//    fun delete(uuid: String)
+    fun delete(uuid: String)
 
 }

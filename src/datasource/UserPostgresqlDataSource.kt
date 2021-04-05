@@ -74,9 +74,10 @@ class UserPostgresqlDataSource : UserDataSource {
             }
         }.firstOrNull()
     }
-//    override fun delete(uuid: String) {
-//        transaction {
-//            Users.deleteWhere { Users.id eq UUID.fromString(uuid) }
-//        }
-//    }
+
+    override fun delete(uuid: String) {
+        transaction {
+            Users.deleteWhere { Users.id eq UUID.fromString(uuid) }
+        }
+    }
 }
