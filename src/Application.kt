@@ -5,7 +5,6 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
-import com.google.firebase.auth.hash.Bcrypt
 import org.mindrot.jbcrypt.BCrypt
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.Message
@@ -73,6 +72,21 @@ fun Application.module(testing: Boolean = false) {
                 it.payload.getClaim("id").asString()?.let(sessionDataSource::get)
             }
         }
+        jwt("userAuth") {
+            verifier(JwtConfig.verifier)
+            validate {
+                var user: User? = null
+                try {
+                    user = userDataSource.get(it.payload.getClaim("id").asString())
+                    val userDate = DateTime(user?.updatedAt)
+                    val jwtDate = DateTime(it.payload.getClaim("updated").asString())
+                    if (jwtDate.isBefore(userDate)) user = null
+                } catch (e: Exception) {
+                    user = null
+                }
+                return@validate user
+            }
+        }
     }
 
     install(CORS) {
@@ -92,6 +106,12 @@ fun Application.module(testing: Boolean = false) {
     }
 
     routing {
+        authenticate("userAuth") {
+            get("/user/test") {
+                call.respondText("Success")
+            }
+        }
+
         post("/user/login") {
             try {
                 val params = call.receive<Parameters>()
@@ -103,7 +123,7 @@ fun Application.module(testing: Boolean = false) {
                     )
                     return@post
                 }
-                val user = userDataSource.get(params["username"]!!)
+                val user = userDataSource.getByName(params["username"]!!)
                 if (!BCrypt.checkpw(params["password"], user?.hash)) {
                     call.respondText(
                         Gson().toJson(mapOf("result" to false, "error" to "invalid password")),

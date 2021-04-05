@@ -47,7 +47,7 @@ class UserPostgresqlDataSource : UserDataSource {
 //        return partners.toList()
 //    }
 
-    override fun get(username: String): User? {
+    override fun getByName(username: String): User? {
         return  transaction {
             Users.select { Users.name eq username }.map {
                 User(
@@ -61,6 +61,19 @@ class UserPostgresqlDataSource : UserDataSource {
         }.firstOrNull()
     }
 
+    override fun get(id: String): User? {
+        return  transaction {
+            Users.select { Users.id eq UUID.fromString(id) }.map {
+                User(
+                    it[Users.id],
+                    it[Users.name],
+                    it[Users.hash],
+                    it[Users.createdAt].toString(),
+                    it[Users.updatedAt].toString(),
+                )
+            }
+        }.firstOrNull()
+    }
 //    override fun delete(uuid: String) {
 //        transaction {
 //            Users.deleteWhere { Users.id eq UUID.fromString(uuid) }

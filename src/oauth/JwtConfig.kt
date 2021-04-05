@@ -23,6 +23,7 @@ object JwtConfig {
     fun makeUserToken(user: User): String = JWT.create()
         .withSubject("Authentication")
         .withClaim("id", user.id.toString())
+        .withClaim("updated", user.updatedAt)
         .sign(algorithm)
 
     fun decodeId(token : String) : String {

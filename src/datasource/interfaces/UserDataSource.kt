@@ -6,7 +6,9 @@ interface UserDataSource {
 
     fun create(channel: User)
 
-    fun get(userName : String) : User?
+    fun getByName(userName : String) : User?
+
+    fun get(id : String) : User?
 //
 //    fun update(user : User) : User?
 //
