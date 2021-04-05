@@ -100,6 +100,7 @@ fun Application.module(testing: Boolean = false) {
         header(HttpHeaders.ContentType)
         exposeHeader(HttpHeaders.AccessControlAllowOrigin)
         header(HttpHeaders.XForwardedProto)
+        header(HttpHeaders.Authorization)
         allowCredentials = true
         allowNonSimpleContentTypes = true
         anyHost()
