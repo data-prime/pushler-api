@@ -6,7 +6,7 @@ interface UserDataSource {
 
     fun create(channel: User)
 
-//    fun get(uuid : String) : User?
+    fun get(userName : String) : User?
 //
 //    fun update(user : User) : User?
 //

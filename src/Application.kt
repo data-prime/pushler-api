@@ -5,6 +5,7 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.hash.Bcrypt
 import org.mindrot.jbcrypt.BCrypt
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.Message
@@ -91,6 +92,42 @@ fun Application.module(testing: Boolean = false) {
     }
 
     routing {
+        post("/user/login") {
+            try {
+                val params = call.receive<Parameters>()
+                if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                    return@post
+                }
+                val user = userDataSource.get(params["username"]!!)
+                if (!BCrypt.checkpw(params["password"], user?.hash)) {
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to "invalid password")),
+                        ContentType.Application.Json,
+                        HttpStatusCode.Unauthorized
+                    )
+                    return@post
+                }
+                call.respondText(Gson().toJson(
+                    mapOf(
+                        "result" to true,
+                        "token" to JwtConfig.makeUserToken(user!!),
+                    )
+                ), ContentType.Application.Json, HttpStatusCode.OK)
+            } catch (e : Exception) {
+                e.printStackTrace()
+                call.respondText(
+                    Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                    ContentType.Application.Json,
+                    HttpStatusCode.BadRequest
+                )
+            }
+        }
+
         post("/user") {
             try {
                 val params = call.receive<Parameters>()

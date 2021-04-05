@@ -3,6 +3,7 @@ package com.pushler.oauth
 import com.auth0.jwt.*
 import com.auth0.jwt.algorithms.*
 import com.pushler.dto.Session
+import com.pushler.dto.User
 
 object JwtConfig {
 
@@ -18,6 +19,11 @@ object JwtConfig {
             .withSubject("Authentication")
             .withClaim("id", session.id.toString())
             .sign(algorithm)
+
+    fun makeUserToken(user: User): String = JWT.create()
+        .withSubject("Authentication")
+        .withClaim("id", user.id.toString())
+        .sign(algorithm)
 
     fun decodeId(token : String) : String {
         return JWT.decode(token.replace("Bearer ", "").trim()).getClaim("id").asString()

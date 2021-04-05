@@ -46,25 +46,21 @@ class UserPostgresqlDataSource : UserDataSource {
 //
 //        return partners.toList()
 //    }
-//
-//    override fun get(uuid: String): User? {
-//
-//        return  transaction {
-//            Users.select { Users.id eq UUID.fromString(uuid) }.map {
-//                User(
-//                    it[Users.id],
-//                    it[Users.tag],
-//                    it[Users.name],
-//                    it[Users.public],
-//                    it[Users.pathURL],
-//                    it[Users.imageURL],
-//                    it[Users.createAt].toString(),
-//                    it[Users.changeAt].toString(),
-//                )
-//            }
-//        }.firstOrNull()
-//    }
-//
+
+    override fun get(username: String): User? {
+        return  transaction {
+            Users.select { Users.name eq username }.map {
+                User(
+                    it[Users.id],
+                    it[Users.name],
+                    it[Users.hash],
+                    it[Users.createdAt].toString(),
+                    it[Users.updatedAt].toString(),
+                )
+            }
+        }.firstOrNull()
+    }
+
 //    override fun delete(uuid: String) {
 //        transaction {
 //            Users.deleteWhere { Users.id eq UUID.fromString(uuid) }
