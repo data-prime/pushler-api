@@ -7,6 +7,7 @@ import com.pushler.datasource.tables.Notifications
 import com.pushler.datasource.tables.Channels
 import com.pushler.datasource.tables.Sessions
 import com.pushler.datasource.tables.Users
+import com.pushler.datasource.tables.Subscriptions
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -21,10 +22,7 @@ class DataBaseLocalDataSource() : DataBaseDataSource {
         Database.connect(ds)
 
         transaction {
-            SchemaUtils.create(Sessions)
-            SchemaUtils.create(Notifications)
-            SchemaUtils.create(Channels)
-            SchemaUtils.create(Users)
+            SchemaUtils.create(Sessions, Notifications, Channels, Subscriptions, Users)
         }
     }
 

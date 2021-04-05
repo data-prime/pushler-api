@@ -9,7 +9,6 @@ import java.util.*
 
 object Channels : Table() {
     val id : Column<UUID> = uuid("id").primaryKey()
-    val tag : Column<String> = text("tag").uniqueIndex()
     val name: Column<String> = text("name")
     val public: Column<Boolean> = bool("public")
     val pathURL: Column<String?> = text("path_url").nullable()

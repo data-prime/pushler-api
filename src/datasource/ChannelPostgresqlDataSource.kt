@@ -22,7 +22,6 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
                 partners.add(
                     Channel(
                         it[Channels.id],
-                        it[Channels.tag],
                         it[Channels.name],
                         it[Channels.public],
                         it[Channels.pathURL],
@@ -43,24 +42,6 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
             Channels.select { Channels.id eq UUID.fromString(uuid) }.map {
                 Channel(
                     it[Channels.id],
-                    it[Channels.tag],
-                    it[Channels.name],
-                    it[Channels.public],
-                    it[Channels.pathURL],
-                    it[Channels.imageURL],
-                    it[Channels.createAt].toString(),
-                    it[Channels.changeAt].toString(),
-                )
-            }
-        }.firstOrNull()
-    }
-
-    override fun getFromTag(tag: String): Channel? {
-        return  transaction {
-            Channels.select { Channels.tag eq tag }.map {
-                Channel(
-                    it[Channels.id],
-                    it[Channels.tag],
                     it[Channels.name],
                     it[Channels.public],
                     it[Channels.pathURL],
@@ -76,7 +57,6 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
         transaction {
             Channels.insert {
                 it[id] = channel.id
-                it[tag] = channel.tag
                 it[name] = channel.name
                 it[public] = channel.public
                 it[pathURL] = channel.pathURL

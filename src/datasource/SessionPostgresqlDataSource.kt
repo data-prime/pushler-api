@@ -1,13 +1,17 @@
 package com.pushler.datasource
 
 import com.pushler.datasource.interfaces.SessionDataSource
+import com.pushler.datasource.tables.Channels
 import com.pushler.datasource.tables.Sessions
+import com.pushler.datasource.tables.Subscriptions
+import com.pushler.dto.Channel
 import com.pushler.dto.Session
+import com.pushler.dto.Subscriber
+import org.jetbrains.exposed.sql.*
 
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.postgresql.jdbc.PgArray
+import org.joda.time.DateTime
 import java.sql.ResultSet
 import java.util.*
 
@@ -19,12 +23,13 @@ class SessionPostgresqlDataSource : SessionDataSource {
         val session = Session(UUID.randomUUID())
 
         transaction {
-            val conn = TransactionManager.current().connection
-            val statement = conn.createStatement()
-            val query = "INSERT INTO sessions (id, subscriptions, create_at, change_at) VALUES ('${session.id}', ARRAY${session.subscriptions.map { "'${it}'" }}::text[], NOW(), NOW())"
-            statement.execute(query)
+            Sessions.insert {
+                it[id] = session.id
+                it[fcm] = session.fcm
+                it[createAt] = DateTime.now()
+                it[changeAt] = DateTime.now()
+            }
         }
-
         return session
     }
 
@@ -36,7 +41,6 @@ class SessionPostgresqlDataSource : SessionDataSource {
                 session = Session(
                     it[Sessions.id],
                     it[Sessions.fcm],
-                    it[Sessions.subscriptions],
                     it[Sessions.createAt].toString(),
                     it[Sessions.changeAt].toString(),
                 )
@@ -46,30 +50,107 @@ class SessionPostgresqlDataSource : SessionDataSource {
         return session
     }
 
-    override fun getFromTag(tag: String) : List<Session> {
-        val sessions: MutableList<Session> = mutableListOf()
-
-
+    override fun getSubscriber(session: Session) : List<Subscriber> {
+        val subscriber: MutableList<Subscriber> = mutableListOf()
 
         transaction {
-            val conn = TransactionManager.current().connection
-            val statement = conn.createStatement()
-            val query = "SELECT * FROM sessions WHERE array_to_string(subscriptions, ' , ') like '%$tag%'"
-            val result : ResultSet = statement.executeQuery(query)
-            while(result.next()) {
-                sessions.add(
-                    Session(
-                        UUID.fromString(result.getString(Sessions.id.name)),
-                        result.getString(Sessions.fcm.name),
-                        ((result.getArray(Sessions.subscriptions.name) as PgArray).array as Array<*>).map { it as String }.toList(),
-                        result.getDate(Sessions.createAt.name).toString(),
-                        result.getDate(Sessions.changeAt.name).toString(),
-                    )
-                )
+            Subscriptions.innerJoin(Channels).select { (Subscriptions.channel eq Channels.id) and (Subscriptions.session eq session.id) }.map {
+                subscriber.add(Subscriber(
+                    it[Subscriptions.id],
+                    session,
+                    Channel(
+                        it[Channels.id],
+                        it[Channels.name],
+                        it[Channels.public],
+                        it[Channels.pathURL],
+                        it[Channels.imageURL],
+                        it[Channels.createAt].toString(),
+                        it[Channels.changeAt].toString(),
+                    ),
+                    it[Subscriptions.tag],
+                    it[Subscriptions.createAt].toString()
+                ))
             }
-
         }
-        return sessions.toList()
+        return subscriber.toList()
+    }
+
+    override fun getSubscriber(channel: Channel) : List<Subscriber> {
+        val subscriber: MutableList<Subscriber> = mutableListOf()
+
+        transaction {
+            Subscriptions.innerJoin(Sessions).select { (Subscriptions.channel eq channel.id) and (Subscriptions.session eq Sessions.id) }.map {
+                subscriber.add(Subscriber(
+                    it[Subscriptions.id],
+                    Session(
+                        it[Sessions.id],
+                        it[Sessions.fcm],
+                        it[Sessions.createAt].toString(),
+                        it[Sessions.changeAt].toString(),
+                    ),
+                    channel,
+                    it[Subscriptions.tag],
+                    it[Subscriptions.createAt].toString()
+                ))
+            }
+        }
+        return subscriber.toList()
+    }
+
+    override fun getSubscriber(channel: Channel, tag : String) : List<Subscriber> {
+        val subscriber: MutableList<Subscriber> = mutableListOf()
+
+        transaction {
+            Subscriptions.innerJoin(Sessions).select { (Subscriptions.channel eq channel.id) and (Subscriptions.session eq Sessions.id) and (Subscriptions.tag eq tag) }.map {
+                subscriber.add(Subscriber(
+                    it[Subscriptions.id],
+                    Session(
+                        it[Sessions.id],
+                        it[Sessions.fcm],
+                        it[Sessions.createAt].toString(),
+                        it[Sessions.changeAt].toString(),
+                    ),
+                    channel,
+                    it[Subscriptions.tag],
+                    it[Subscriptions.createAt].toString()
+                ))
+            }
+        }
+        return subscriber.toList()
+    }
+
+    override fun getSubscriber(channel: Channel, session: Session) : List<Subscriber> {
+        val subscriber: MutableList<Subscriber> = mutableListOf()
+
+        transaction {
+            Subscriptions.select { (Subscriptions.channel eq channel.id) and (Subscriptions.session eq session.id) }.map {
+                subscriber.add(Subscriber(
+                    it[Subscriptions.id],
+                    session,
+                    channel,
+                    it[Subscriptions.tag],
+                    it[Subscriptions.createAt].toString()
+                ))
+            }
+        }
+        return subscriber.toList()
+    }
+
+    override fun getSubscriber(channel: Channel, session: Session, tag: String): Subscriber? {
+        val subscriber: MutableList<Subscriber> = mutableListOf()
+
+        transaction {
+            Subscriptions.select { (Subscriptions.channel eq channel.id) and (Subscriptions.session eq session.id) and (Subscriptions.tag eq tag) }.map {
+                subscriber.add(Subscriber(
+                    it[Subscriptions.id],
+                    session,
+                    channel,
+                    it[Subscriptions.tag],
+                    it[Subscriptions.createAt].toString()
+                ))
+            }
+        }
+        return subscriber.firstOrNull()
     }
 
     override fun getAll(): List<Session> {
@@ -86,7 +167,6 @@ class SessionPostgresqlDataSource : SessionDataSource {
                     Session(
                         UUID.fromString(result.getString(Sessions.id.name)),
                         result.getString(Sessions.fcm.name),
-                        ((result.getArray(Sessions.subscriptions.name) as PgArray).array as Array<*>).map { it as String }.toList(),
                         result.getDate(Sessions.createAt.name).toString(),
                         result.getDate(Sessions.changeAt.name).toString(),
                     )
@@ -100,34 +180,41 @@ class SessionPostgresqlDataSource : SessionDataSource {
 
     override fun insertFCM(fcm: String, session : Session) {
         if (fcm != session.fcm) {
+
             transaction {
-                val conn = TransactionManager.current().connection
-                val statement = conn.createStatement()
-                val query = "UPDATE sessions SET fcm_token = '${fcm}', change_at = NOW() WHERE id = '${session.id}'"
-                statement.execute(query)
+                Sessions.deleteWhere { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }
+
+                Sessions.update ({ Sessions.id eq session.id }) {
+                    it[Sessions.fcm] = fcm
+                }
             }
         }
     }
 
-    override fun insertTag(tag: String, session : Session) {
-        if (!session.subscriptions.contains(tag)) {
-            transaction {
-                val conn = TransactionManager.current().connection
-                val statement = conn.createStatement()
-                val query = "UPDATE sessions SET subscriptions = array_append(subscriptions, '${tag}'), change_at = NOW() WHERE id = '${session.id}'"
-                statement.execute(query)
+    override fun subscribe(session : Session, channel : Channel, tag: String?) {
+        transaction {
+            val count = Subscriptions.select { (Subscriptions.channel eq channel.id) and (Subscriptions.session eq session.id) and (Subscriptions.tag eq tag) }.count()
+
+            if (count < 1) {
+                Subscriptions.insert {
+                    it[Subscriptions.session] = session.id
+                    it[Subscriptions.channel] = channel.id
+                    it[Subscriptions.tag] = tag
+                    it[Subscriptions.createAt] = DateTime.now()
+                }
             }
         }
     }
 
-    override fun removeTag(tag: String, session : Session) {
-        if (session.subscriptions.contains(tag)) {
-            transaction {
-                val conn = TransactionManager.current().connection
-                val statement = conn.createStatement()
-                val query = "UPDATE sessions SET subscriptions = array_remove(subscriptions, '${tag}'), change_at = NOW() WHERE id = '${session.id}'"
-                statement.execute(query)
+    override fun unsubscribe(session : Session, channel : Channel, tag: String?) {
+        transaction {
+
+            if (tag != null) {
+                Subscriptions.deleteWhere{ (Subscriptions.channel eq channel.id) and (Subscriptions.session eq session.id) and (Subscriptions.tag eq tag) }
+            } else {
+                Subscriptions.deleteWhere{ (Subscriptions.channel eq channel.id) and (Subscriptions.session eq session.id) }
             }
+
         }
     }
 }

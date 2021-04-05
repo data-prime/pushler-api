@@ -10,7 +10,6 @@ import java.util.*
 object Sessions : Table() {
     val id : Column<UUID> = uuid("id").primaryKey()
     val fcm: Column<String?> = text("fcm_token").nullable()
-    val subscriptions : Column<List<String>> = textArray("subscriptions")
     val createAt: Column<DateTime> = datetime("create_at")
     val changeAt: Column<DateTime> = datetime("change_at")
 }
