@@ -18,10 +18,7 @@ import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import com.pushler.datasource.*
-import com.pushler.datasource.interfaces.DataBaseDataSource
-import com.pushler.datasource.interfaces.NotificationDataSource
-import com.pushler.datasource.interfaces.ChannelDataSource
-import com.pushler.datasource.interfaces.SessionDataSource
+import com.pushler.datasource.interfaces.*
 import com.pushler.dto.*
 import com.pushler.oauth.JwtConfig
 import org.joda.time.DateTime
@@ -30,11 +27,10 @@ import java.io.FileInputStream
 import java.util.*
 
 lateinit var database: DataBaseDataSource
-
-//var database: DataBaseDataSource = DataBaseLocalDataSource();
 var notificationDataSource: NotificationDataSource = NotificationPostgresqlDataSource()
 var sessionDataSource: SessionDataSource = SessionPostgresqlDataSource()
 var channelDataSource: ChannelDataSource = ChannelPostgresqlDataSource()
+var userDataSource: UserDataSource = UserPostgresqlDataSource()
 
 var credentialsPath: File = File("firebase/service_account.json")
 
@@ -96,11 +92,10 @@ fun Application.module(testing: Boolean = false) {
 
     routing {
         post("/user") {
-            val params = call.receive<Parameters>()
-
             try {
+                val params = call.receive<Parameters>()
                 if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "invalid params")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to "invalid params")), ContentType.Application.Json, HttpStatusCode.BadRequest)
                     return@post
                 }
                 val user = User(
@@ -108,9 +103,11 @@ fun Application.module(testing: Boolean = false) {
                     hash = BCrypt.hashpw(params["password"]!!, BCrypt.gensalt()),
                 )
 
-                call.respondText(Gson().toJson(mapOf("result" to true, "hash" to user.hash)), ContentType.Application.Json, HttpStatusCode.OK)
+                userDataSource.create(user)
+
+                call.respondText(Gson().toJson(user), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -158,7 +155,7 @@ fun Application.module(testing: Boolean = false) {
                 call.respondText(Gson().toJson(
                     mapOf(
                         "result" to false,
-                        "message" to e.toString()
+                        "error" to e.toString()
                     )
                 ), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
@@ -227,7 +224,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true, "uuid" to channel.id.toString())), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -249,13 +246,13 @@ fun Application.module(testing: Boolean = false) {
                 // if user is not owner return
 
                 if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
                     return@get
                 }
                 call.respondText(Gson().toJson(mapOf("result" to true, "channel" to channel)), ContentType.Application.Json, HttpStatusCode.OK)
 
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -279,14 +276,14 @@ fun Application.module(testing: Boolean = false) {
                 // if user is not owner return
 
                 if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
                     return@delete
                 }
 
                 channelDataSource.delete(channel.id.toString())
                 call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -325,7 +322,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true, "subscribers" to subscribers)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -368,7 +365,7 @@ fun Application.module(testing: Boolean = false) {
                 call.respondText(Gson().toJson(mapOf("result" to true, "subscribers" to subscribers)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
                 e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -419,7 +416,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -445,7 +442,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -475,7 +472,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -495,7 +492,7 @@ fun Application.module(testing: Boolean = false) {
                 call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)
 
             } catch (e : Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -539,7 +536,7 @@ fun Application.module(testing: Boolean = false) {
                     )), ContentType.Application.Json, HttpStatusCode.OK)
 
                 } catch (e : Exception) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -557,7 +554,7 @@ fun Application.module(testing: Boolean = false) {
                     sessionDataSource.insertFCM(receive["fcm"]!!, session)
                     call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
                 } catch (e : Exception) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -576,7 +573,7 @@ fun Application.module(testing: Boolean = false) {
                     sessionDataSource.insertTag(receive["tag"]!!, session)
                     call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
                 } catch (e : Exception) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -596,7 +593,7 @@ fun Application.module(testing: Boolean = false) {
                     sessionDataSource.removeTag(receive["tag"]!!, session)
                     call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
                 } catch (e : Exception) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -674,7 +671,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e: Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
@@ -746,7 +743,7 @@ fun Application.module(testing: Boolean = false) {
 
                 call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e: Exception) {
-                call.respondText(Gson().toJson(mapOf("result" to false, "message" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
     }
