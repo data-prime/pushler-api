@@ -75,7 +75,7 @@ fun Application.module(testing: Boolean = false) {
         jwt("userAuth") {
             verifier(JwtConfig.verifier)
             validate {
-                var user: User? = null
+                var user: User?
                 try {
                     user = userDataSource.get(it.payload.getClaim("id").asString())
                     val userDate = DateTime(user?.updatedAt)
@@ -145,7 +145,7 @@ fun Application.module(testing: Boolean = false) {
 
         authenticate("userAuth") {
             get ("/user/test") {
-                call.response.status(HttpStatusCode.OK)
+                call.respondText("", ContentType.Application.Json, HttpStatusCode.OK)
             }
             post("/user") {
                 try {
@@ -187,7 +187,7 @@ fun Application.module(testing: Boolean = false) {
                         return@delete
                     }
                     userDataSource.delete(params["id"].toString())
-                    call.response.status(HttpStatusCode.NoContent)
+                    call.respondText("", ContentType.Application.Json, HttpStatusCode.NoContent)
                 } catch (e : Exception) {
                     e.printStackTrace()
                     call.respondText(
@@ -195,6 +195,388 @@ fun Application.module(testing: Boolean = false) {
                         ContentType.Application.Json,
                         HttpStatusCode.BadRequest
                     )
+                }
+            }
+
+            get("/channels") {
+                try {
+                    // return the channels owned by the user
+                    val channels = channelDataSource.getAll()
+                    call.respondText(Gson().toJson(channels), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                }
+            }
+
+            post("/channels") {
+                try {
+                    val receive = call.receive<Parameters>()
+
+                    // add channel owner
+
+                    val channel = Channel(
+                        name = receive["name"]!!,
+                        imageURL = receive["imageURL"],
+                        pathURL = receive["pathURL"],
+                        public = false,
+                    )
+
+
+
+                    channelDataSource.create(channel)
+
+                    call.respondText(Gson().toJson(mapOf("result" to true, "uuid" to channel.id.toString())), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            get("/channels/{channel}") {
+                try {
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                        return@get
+                    }
+                    call.respondText(Gson().toJson(mapOf("result" to true, "channel" to channel)), ContentType.Application.Json, HttpStatusCode.OK)
+
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            delete("/channels/{channel}") {
+                try {
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                        return@delete
+                    }
+
+                    channelDataSource.delete(channel.id.toString())
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            get("/channels/{channel}/sessions") {
+                try {
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                        return@get
+                    }
+
+
+
+                    val subscribers = sessionDataSource.getSubscriber(channel)
+
+
+                    call.respondText(Gson().toJson(mapOf("result" to true, "subscribers" to subscribers)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            get("/channels/{channel}/sessions/{session}") {
+                try {
+
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                        return@get
+                    }
+
+                    val subscribers = mutableListOf<Subscriber>()
+                    val sessions = call.parameters["session"]?.let { sessionDataSource.get(it) }
+
+                    sessions?.let { session ->
+                        subscribers.addAll(sessionDataSource.getSubscriber(channel, session))
+                    }
+
+                    call.respondText(Gson().toJson(mapOf("result" to true, "subscribers" to subscribers)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            post("/channels/{channel}/invite") {
+                try {
+                    val receive = call.receive<Parameters>()
+
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                        return@post
+                    }
+
+
+
+                    sessionDataSource.get(receive["session"]!!)?.let { session ->
+
+
+                        val subscriber = sessionDataSource.getSubscriber(channel,session, receive["tag"].toString())
+                        if (subscriber != null) {
+                            throw Exception("session is already subscribed")
+                        }
+
+                        session.fcm?.let { token ->
+
+                            val message: Message = Message.builder()
+                                .setToken(token)
+                                .setNotification(
+                                    com.google.firebase.messaging.Notification.builder()
+                                        .setTitle("Invite")
+                                        .setBody("Invite to ${channel.name}")
+                                        .build()
+                                )
+                                .putData("action", "invite")
+                                .putData("target", receive["tag"])
+                                .putData("channel_name", channel.name)
+                                .putData("channel", channel.id.toString())
+                                .build()
+
+
+                            try {
+                                FirebaseMessaging.getInstance().send(message)
+                            } catch (e : Exception) {
+
+                            }
+                        }
+                    }
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            post("/channels/{channel}/subscribe") {
+                try {
+                    val receive = call.receive<Parameters>()
+
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                        return@post
+                    }
+
+                    sessionDataSource.get(receive["session"]!!)?.let { session ->
+                        sessionDataSource.subscribe(session, channel, receive["tag"])
+                    }
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            post("/channels/{channel}/unsubscribe") {
+                try {
+                    val receive = call.receive<Parameters>()
+
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                        return@post
+                    }
+
+                    sessionDataSource.get(receive["session"]!!)?.let { session ->
+                        sessionDataSource.unsubscribe(session, channel, receive["tag"])
+                    }
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            post("/channels/{channel}/push") {
+                try {
+                    val receive = call.receive<Parameters>()
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+                    var data : Map<String, String> = mapOf()
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                        return@post
+                    }
+
+                    receive["data"]?.let {
+                        if (it.isNotEmpty()) {
+                            data = Gson().fromJson<Map<String, String>>(it, Map::class.java)
+                        }
+                    }
+
+                    val notification = Notification(
+                        sender = channel,
+                        recipient = receive["tag"]!!,
+                        title = receive["title"]!!,
+                        body = receive["body"]!!,
+                        data = data
+                    )
+
+                    sessionDataSource.getSubscriber(channel, receive["tag"]!!).forEach { subscriber ->
+
+                        subscriber.session.fcm?.let { token ->
+
+                            val firebaseNotification = com.google.firebase.messaging.Notification.builder()
+                            firebaseNotification
+                                .setTitle(notification.title)
+                                .setBody(notification.body)
+
+                            receive["image"]?.let {
+                                firebaseNotification.setImage(it)
+                            }
+
+
+
+                            val message: Message.Builder = Message.builder()
+                                .setToken(token)
+                                .setNotification(firebaseNotification.build())
+
+                            message.putData("action", "default")
+
+                            data.forEach { (key, value) ->
+                                message.putData(key, value)
+                            }
+
+
+                            try {
+                                println("send $token")
+
+                                FirebaseMessaging.getInstance().send(message.build())
+                            } catch (e : Exception) {
+
+                            }
+
+
+
+                        }
+                    }
+
+                    notificationDataSource.pushNotification(notification)
+
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            post("/channels/{channel}/push/{session}") {
+                try {
+                    val receive = call.receive<Parameters>()
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+                    var data : Map<String, String> = mapOf()
+
+                    // if user is not owner return
+
+                    if (channel == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                        return@post
+                    }
+
+                    receive["data"]?.let {
+                        if (it.isNotEmpty()) {
+                            data = Gson().fromJson<Map<String, String>>(it, Map::class.java)
+                        }
+                    }
+
+
+
+                    sessionDataSource.get(call.parameters["session"]!!)?.let { session ->
+
+                        val subscribe = sessionDataSource.getSubscriber(session).find { it.channel == channel } != null
+
+                        if (subscribe) {
+                            val notification = Notification(
+                                sender = channel,
+                                recipient = session.id.toString(),
+                                title = receive["title"]!!,
+                                body = receive["body"]!!,
+                                data = data
+                            )
+
+                            session.fcm?.let { token ->
+
+                                val firebaseNotification = com.google.firebase.messaging.Notification.builder()
+                                firebaseNotification
+                                    .setTitle(notification.title)
+                                    .setBody(notification.body)
+
+                                receive["image"]?.let {
+                                    firebaseNotification.setImage(it)
+                                }
+
+                                val message: Message.Builder = Message.builder()
+                                    .setToken(token)
+                                    .setNotification(firebaseNotification.build())
+
+                                message.putData("action", "default")
+
+                                data.forEach { (key, value) ->
+                                    message.putData(key, value)
+                                }
+
+
+                                try {
+                                    println("send $token")
+
+                                    FirebaseMessaging.getInstance().send(message.build())
+                                } catch (e : Exception) {
+
+                                }
+                            }
+
+                            notificationDataSource.pushNotification(notification)
+                        } else {
+                            throw Exception("Session is not subscriber")
+                        }
+                    }
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -207,7 +589,6 @@ fun Application.module(testing: Boolean = false) {
 
         post("/auth") {
             try {
-                val receive = call.receive<Parameters>()
                 val token = call.request.header("Authorization")
                 var session : Session? = null
 
@@ -243,284 +624,8 @@ fun Application.module(testing: Boolean = false) {
             }
         }
 
-        get("/channels") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                // return the channels owned by the user
-                val channels = channelDataSource.getAll()
-                call.respondText(Gson().toJson(channels), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(
-                    Gson().toJson(mapOf("result" to false, "error" to e.toString())),
-                    ContentType.Application.Json,
-                    HttpStatusCode.BadRequest
-                )
-            }
-        }
-
-        post("/channels") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                // add channel owner
-
-                val channel = Channel(
-                    name = receive["name"]!!,
-                    imageURL = receive["imageURL"],
-                    pathURL = receive["pathURL"],
-                    public = false,
-                )
-
-
-
-                channelDataSource.create(channel)
-
-                call.respondText(Gson().toJson(mapOf("result" to true, "uuid" to channel.id.toString())), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        get("/channels/{channel}") {
-            try {
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                    return@get
-                }
-                call.respondText(Gson().toJson(mapOf("result" to true, "channel" to channel)), ContentType.Application.Json, HttpStatusCode.OK)
-
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        delete("/channels/{channel}") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                    return@delete
-                }
-
-                channelDataSource.delete(channel.id.toString())
-                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        get("/channels/{channel}/sessions") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@get
-                }
-
-
-
-                val subscribers = sessionDataSource.getSubscriber(channel)
-
-
-                call.respondText(Gson().toJson(mapOf("result" to true, "subscribers" to subscribers)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        get("/channels/{channel}/sessions/{session}") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@get
-                }
-
-                val subscribers = mutableListOf<Subscriber>()
-                val sessions = call.parameters["session"]?.let { sessionDataSource.get(it) }
-
-                sessions?.let { session ->
-                    subscribers.addAll(sessionDataSource.getSubscriber(channel, session))
-                }
-
-                call.respondText(Gson().toJson(mapOf("result" to true, "subscribers" to subscribers)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        post("/channels/{channel}/invite") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-
-
-                sessionDataSource.get(receive["session"]!!)?.let { session ->
-
-
-                    val subscriber = sessionDataSource.getSubscriber(channel,session, receive["tag"].toString())
-                    if (subscriber != null) {
-                        throw Exception("session is already subscribed")
-                    }
-
-                    session.fcm?.let { token ->
-
-                        val message: Message = Message.builder()
-                            .setToken(token)
-                            .setNotification(
-                                com.google.firebase.messaging.Notification.builder()
-                                    .setTitle("Invite")
-                                    .setBody("Invite to ${channel.name}")
-                                    .build()
-                            )
-                            .putData("action", "invite")
-                            .putData("target", receive["tag"])
-                            .putData("channel_name", channel.name)
-                            .putData("channel", channel.id.toString())
-                            .build()
-
-
-                        try {
-                            FirebaseMessaging.getInstance().send(message)
-                        } catch (e : Exception) {
-
-                        }
-                    }
-                }
-
-                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        post("/channels/{channel}/subscribe") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-                sessionDataSource.get(receive["session"]!!)?.let { session ->
-                    sessionDataSource.subscribe(session, channel, receive["tag"])
-                }
-
-                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        post("/channels/{channel}/unsubscribe") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-                sessionDataSource.get(receive["session"]!!)?.let { session ->
-                    sessionDataSource.unsubscribe(session, channel, receive["tag"])
-                }
-
-                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
         get("/sessions") {
             try {
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-
                 // if user is not admin return
 
                 val sessions = sessionDataSource.getAll()
@@ -535,7 +640,6 @@ fun Application.module(testing: Boolean = false) {
         authenticate {
             get("/sessions/fetch") {
                 try {
-                    val receive = call.receive<Parameters>()
                     val session = call.principal<Session>()!!
                     val notifications = mutableListOf<Notification>()
                     val subscriptions = sessionDataSource.getSubscriber(session)
@@ -623,168 +727,6 @@ fun Application.module(testing: Boolean = false) {
                     e.printStackTrace()
                     call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
                 }
-            }
-        }
-
-        post("/channels/{channel}/push") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-                var data : Map<String, String> = mapOf()
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-                receive["data"]?.let {
-                    if (it.isNotEmpty()) {
-                        data = Gson().fromJson<Map<String, String>>(it, Map::class.java)
-                    }
-                }
-
-                val notification = Notification(
-                    sender = channel,
-                    recipient = receive["tag"]!!,
-                    title = receive["title"]!!,
-                    body = receive["body"]!!,
-                    data = data
-                )
-
-                sessionDataSource.getSubscriber(channel, receive["tag"]!!).forEach { subscriber ->
-
-                    subscriber.session.fcm?.let { token ->
-
-                        val firebaseNotification = com.google.firebase.messaging.Notification.builder()
-                        firebaseNotification
-                            .setTitle(notification.title)
-                            .setBody(notification.body)
-
-                        receive["image"]?.let {
-                            firebaseNotification.setImage(it)
-                        }
-
-
-
-                        val message: Message.Builder = Message.builder()
-                            .setToken(token)
-                            .setNotification(firebaseNotification.build())
-
-                        message.putData("action", "default")
-
-                        data.forEach { (key, value) ->
-                            message.putData(key, value)
-                        }
-
-
-                        try {
-                            println("send $token")
-
-                            FirebaseMessaging.getInstance().send(message.build())
-                        } catch (e : Exception) {
-
-                        }
-
-
-
-                    }
-                }
-
-                notificationDataSource.pushNotification(notification)
-
-
-                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        post("/channels/{channel}/push/{session}") {
-            try {
-                val receive = call.receive<Parameters>()
-                val user = call.request.header("Authorization")?.let {
-                    // return user
-                    return@let null
-                }
-                val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
-                var data : Map<String, String> = mapOf()
-
-                // if user is not owner return
-
-                if (channel == null) {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
-                    return@post
-                }
-
-                receive["data"]?.let {
-                    if (it.isNotEmpty()) {
-                        data = Gson().fromJson<Map<String, String>>(it, Map::class.java)
-                    }
-                }
-
-
-
-                sessionDataSource.get(call.parameters["session"]!!)?.let { session ->
-
-                    val subscribe = sessionDataSource.getSubscriber(session).find { it.channel == channel } != null
-
-                    if (subscribe) {
-                        val notification = Notification(
-                            sender = channel,
-                            recipient = session.id.toString(),
-                            title = receive["title"]!!,
-                            body = receive["body"]!!,
-                            data = data
-                        )
-
-                        session.fcm?.let { token ->
-
-                            val firebaseNotification = com.google.firebase.messaging.Notification.builder()
-                            firebaseNotification
-                                .setTitle(notification.title)
-                                .setBody(notification.body)
-
-                            receive["image"]?.let {
-                                firebaseNotification.setImage(it)
-                            }
-
-                            val message: Message.Builder = Message.builder()
-                                .setToken(token)
-                                .setNotification(firebaseNotification.build())
-
-                            message.putData("action", "default")
-
-                            data.forEach { (key, value) ->
-                                message.putData(key, value)
-                            }
-
-
-                            try {
-                                println("send $token")
-
-                                FirebaseMessaging.getInstance().send(message.build())
-                            } catch (e : Exception) {
-
-                            }
-                        }
-
-                        notificationDataSource.pushNotification(notification)
-                    } else {
-                        throw Exception("Session is not subscriber")
-                    }
-                }
-
-                call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
     }
