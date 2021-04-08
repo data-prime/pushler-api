@@ -9,7 +9,7 @@ import java.util.*
 
 object Notifications : Table() {
     val id : Column<UUID> = uuid("id").primaryKey()
-    val sender = reference("sender", Channels.id, onDelete = ReferenceOption.CASCADE)
+    val sender = reference("sender", Channels.id, onDelete = ReferenceOption.CASCADE).nullable()
     val recipient: Column<String> = text("recipient")
     val title: Column<String> = text("title")
     val body: Column<String?> = text("body").nullable()

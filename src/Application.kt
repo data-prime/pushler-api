@@ -583,6 +583,73 @@ fun Application.module(testing: Boolean = false) {
                     call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
                 }
             }
+
+            post("/channels/pushler/push_all") {
+                try {
+                    val user = call.principal<User>()!!
+                    val receive = call.receive<Parameters>()
+                    var data : Map<String, String> = mapOf()
+
+                    // return if user is not admin
+
+
+                    receive["data"]?.let {
+                        if (it.isNotEmpty()) {
+                            data = Gson().fromJson<Map<String, String>>(it, Map::class.java)
+                        }
+                    }
+
+                    sessionDataSource.getAll().forEach { session ->
+                        val notification = Notification(
+                            sender = null,
+                            recipient = session.id.toString(),
+                            title = receive["title"]!!,
+                            body = receive["body"]!!,
+                            data = data
+                        )
+
+                        session.fcm?.let { token ->
+
+                            val firebaseNotification = com.google.firebase.messaging.Notification.builder()
+                            firebaseNotification
+                                .setTitle(notification.title)
+                                .setBody(notification.body)
+
+                            receive["image"]?.let {
+                                firebaseNotification.setImage(it)
+                            }
+
+                            val message: Message.Builder = Message.builder()
+                                .setToken(token)
+                                .setNotification(firebaseNotification.build())
+
+                            message.putData("action", "default")
+
+                            data.forEach { (key, value) ->
+                                message.putData(key, value)
+                            }
+
+
+                            try {
+                                println("send $token")
+
+                                FirebaseMessaging.getInstance().send(message.build())
+                            } catch (e : Exception) {
+
+                            }
+                        }
+
+                        notificationDataSource.pushNotification(notification)
+
+
+                    }
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
         }
 
 
@@ -662,6 +729,8 @@ fun Application.module(testing: Boolean = false) {
                             notifications.addAll(notificationDataSource.getNotifications(subscriber.channel, subscriber.session, it))
                         }
                     }
+
+                    notifications.addAll(notificationDataSource.getPushlerNotifications(session))
 
                     notifications.sortBy { DateTime.parse(it.createAt) }
 

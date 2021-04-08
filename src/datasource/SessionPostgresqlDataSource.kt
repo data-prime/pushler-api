@@ -2,6 +2,7 @@ package com.pushler.datasource
 
 import com.pushler.datasource.interfaces.SessionDataSource
 import com.pushler.datasource.tables.Channels
+import com.pushler.datasource.tables.Notifications
 import com.pushler.datasource.tables.Sessions
 import com.pushler.datasource.tables.Subscriptions
 import com.pushler.dto.Channel
@@ -213,7 +214,13 @@ class SessionPostgresqlDataSource : SessionDataSource {
         if (fcm != session.fcm) {
 
             transaction {
-                Sessions.deleteWhere { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }
+
+                if (session.fcm != null) {
+                    Sessions.select { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }.forEach {
+                        Notifications.deleteWhere { Notifications.recipient eq it[Sessions.id].toString() }
+                    }
+                    Sessions.deleteWhere { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }
+                }
 
                 Sessions.update ({ Sessions.id eq session.id }) {
                     it[Sessions.fcm] = fcm

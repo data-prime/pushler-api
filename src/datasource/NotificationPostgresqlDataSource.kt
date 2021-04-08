@@ -49,11 +49,33 @@ class NotificationPostgresqlDataSource : NotificationDataSource {
         return notifications.toList()
     }
 
+    override fun getPushlerNotifications(session: Session): List<Notification> {
+        val notifications: MutableList<Notification> = mutableListOf()
+
+        transaction {
+            Notifications.select((Notifications.sender eq null) and (Notifications.recipient eq session.id.toString()) ).map { row ->
+                notifications.add(
+                    Notification(
+                        row[Notifications.id],
+                        null,
+                        row[Notifications.recipient],
+                        row[Notifications.title],
+                        row[Notifications.body],
+                        row[Notifications.imageURL],
+                        row[Notifications.data].let { Gson().fromJson<Map<String, String>>(it, Map::class.java) },
+                        row[Notifications.createAt].toString(),
+                    )
+                )
+            }
+        }
+        return notifications.toList()
+    }
+
     override fun pushNotification(notification: Notification) {
         transaction {
             Notifications.insert { row ->
                 row[id] = notification.id
-                row[sender] = notification.sender.id
+                row[sender] = notification.sender?.id
                 row[recipient] = notification.recipient
                 row[title] = notification.title
                 row[body] = notification.body

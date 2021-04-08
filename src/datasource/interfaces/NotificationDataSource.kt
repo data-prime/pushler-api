@@ -9,6 +9,9 @@ interface NotificationDataSource {
 
     fun getNotifications(sender: Channel, session: Session, recipient: String) : List<Notification>
 
+    fun getPushlerNotifications(session: Session) : List<Notification>
+
+
     fun pushNotification(notification : Notification)
 
 }

@@ -5,7 +5,7 @@ import java.util.*
 
 data class Notification(
     val id: UUID = UUID.randomUUID(),
-    val sender: Channel,
+    val sender: Channel?,
     val recipient: String,
     val title: String,
     val body: String? = null,
