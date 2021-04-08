@@ -107,6 +107,7 @@ fun Application.module(testing: Boolean = false) {
     }
 
     routing {
+
         post("/user/login") {
             try {
                 val params = call.receive<Parameters>()
@@ -143,38 +144,40 @@ fun Application.module(testing: Boolean = false) {
             }
         }
 
+        post("/user") {
+            try {
+                val params = call.receive<Parameters>()
+                if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                    return@post
+                }
+                val user = User(
+                    name = params["username"]!!,
+                    hash = BCrypt.hashpw(params["password"]!!, BCrypt.gensalt()),
+                )
+
+                userDataSource.create(user)
+
+                call.respondText(Gson().toJson(user), ContentType.Application.Json, HttpStatusCode.OK)
+            } catch (e : Exception) {
+                e.printStackTrace()
+                call.respondText(
+                    Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                    ContentType.Application.Json,
+                    HttpStatusCode.BadRequest
+                )
+            }
+        }
+
         authenticate("userAuth") {
             get ("/user/test") {
                 call.respondText("", ContentType.Application.Json, HttpStatusCode.OK)
             }
-            post("/user") {
-                try {
-                    val params = call.receive<Parameters>()
-                    if (params["username"].isNullOrBlank() || params["password"].isNullOrBlank()) {
-                        call.respondText(
-                            Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
-                            ContentType.Application.Json,
-                            HttpStatusCode.BadRequest
-                        )
-                        return@post
-                    }
-                    val user = User(
-                        name = params["username"]!!,
-                        hash = BCrypt.hashpw(params["password"]!!, BCrypt.gensalt()),
-                    )
 
-                    userDataSource.create(user)
-
-                    call.respondText(Gson().toJson(user), ContentType.Application.Json, HttpStatusCode.OK)
-                } catch (e : Exception) {
-                    e.printStackTrace()
-                    call.respondText(
-                        Gson().toJson(mapOf("result" to false, "error" to e.toString())),
-                        ContentType.Application.Json,
-                        HttpStatusCode.BadRequest
-                    )
-                }
-            }
             delete("/user") {
                 try {
                     val params = call.receive<Parameters>()
@@ -200,8 +203,8 @@ fun Application.module(testing: Boolean = false) {
 
             get("/channels") {
                 try {
-                    // return the channels owned by the user
-                    val channels = channelDataSource.getAll()
+                    val user = call.principal<User>()!!
+                    val channels = channelDataSource.getFromUser(user.id)
                     call.respondText(Gson().toJson(channels), ContentType.Application.Json, HttpStatusCode.OK)
                 } catch (e : Exception) {
                     e.printStackTrace()
@@ -216,17 +219,15 @@ fun Application.module(testing: Boolean = false) {
             post("/channels") {
                 try {
                     val receive = call.receive<Parameters>()
-
-                    // add channel owner
+                    val user = call.principal<User>()!!
 
                     val channel = Channel(
+                        owner = user.id,
                         name = receive["name"]!!,
                         imageURL = receive["imageURL"],
                         pathURL = receive["pathURL"],
                         public = false,
                     )
-
-
 
                     channelDataSource.create(channel)
 
@@ -239,12 +240,11 @@ fun Application.module(testing: Boolean = false) {
 
             get("/channels/{channel}") {
                 try {
+                    val user = call.principal<User>()!!
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
-                    // if user is not owner return
-
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@get
                     }
                     call.respondText(Gson().toJson(mapOf("result" to true, "channel" to channel)), ContentType.Application.Json, HttpStatusCode.OK)
@@ -257,12 +257,13 @@ fun Application.module(testing: Boolean = false) {
 
             delete("/channels/{channel}") {
                 try {
+                    val user = call.principal<User>()!!
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
                     // if user is not owner return
 
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false, "error" to "channel is not exist")), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@delete
                     }
 
@@ -276,12 +277,13 @@ fun Application.module(testing: Boolean = false) {
 
             get("/channels/{channel}/sessions") {
                 try {
+                    val user = call.principal<User>()!!
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
                     // if user is not owner return
 
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@get
                     }
 
@@ -299,13 +301,13 @@ fun Application.module(testing: Boolean = false) {
 
             get("/channels/{channel}/sessions/{session}") {
                 try {
-
+                    val user = call.principal<User>()!!
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
                     // if user is not owner return
 
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@get
                     }
 
@@ -325,14 +327,13 @@ fun Application.module(testing: Boolean = false) {
 
             post("/channels/{channel}/invite") {
                 try {
+                    val user = call.principal<User>()!!
                     val receive = call.receive<Parameters>()
 
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
-                    // if user is not owner return
-
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@post
                     }
 
@@ -380,14 +381,13 @@ fun Application.module(testing: Boolean = false) {
 
             post("/channels/{channel}/subscribe") {
                 try {
+                    val user = call.principal<User>()!!
                     val receive = call.receive<Parameters>()
 
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
-                    // if user is not owner return
-
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@post
                     }
 
@@ -404,13 +404,12 @@ fun Application.module(testing: Boolean = false) {
 
             post("/channels/{channel}/unsubscribe") {
                 try {
+                    val user = call.principal<User>()!!
                     val receive = call.receive<Parameters>()
 
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
 
-                    // if user is not owner return
-
-                    if (channel == null) {
+                    if (channel == null || user.id != channel.owner) {
                         call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
                         return@post
                     }
@@ -428,14 +427,13 @@ fun Application.module(testing: Boolean = false) {
 
             post("/channels/{channel}/push") {
                 try {
+                    val user = call.principal<User>()!!
                     val receive = call.receive<Parameters>()
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
                     var data : Map<String, String> = mapOf()
 
-                    // if user is not owner return
-
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@post
                     }
 
@@ -486,9 +484,6 @@ fun Application.module(testing: Boolean = false) {
                             } catch (e : Exception) {
 
                             }
-
-
-
                         }
                     }
 
@@ -504,14 +499,15 @@ fun Application.module(testing: Boolean = false) {
 
             post("/channels/{channel}/push/{session}") {
                 try {
+                    val user = call.principal<User>()!!
                     val receive = call.receive<Parameters>()
                     val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
                     var data : Map<String, String> = mapOf()
 
                     // if user is not owner return
 
-                    if (channel == null) {
-                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.Unauthorized)
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
                         return@post
                     }
 
@@ -626,7 +622,12 @@ fun Application.module(testing: Boolean = false) {
 
         get("/sessions") {
             try {
-                // if user is not admin return
+                val user = call.principal<User>()!!
+
+                if (user.name != "pushler") {
+                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                    return@get
+                }
 
                 val sessions = sessionDataSource.getAll()
                 call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)

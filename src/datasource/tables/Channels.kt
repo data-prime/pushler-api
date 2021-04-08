@@ -2,6 +2,7 @@ package com.pushler.datasource.tables
 
 import com.pushler.datasource.extensions.textArray
 import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.Table
 import org.joda.time.DateTime
 import java.util.*
@@ -9,6 +10,7 @@ import java.util.*
 
 object Channels : Table() {
     val id : Column<UUID> = uuid("id").primaryKey()
+    val owner = reference("owner", Users.id, onDelete = ReferenceOption.CASCADE)
     val name: Column<String> = text("name")
     val public: Column<Boolean> = bool("public")
     val pathURL: Column<String?> = text("path_url").nullable()

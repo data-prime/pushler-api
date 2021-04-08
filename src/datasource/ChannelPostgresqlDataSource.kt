@@ -22,6 +22,30 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
                 partners.add(
                     Channel(
                         it[Channels.id],
+                        it[Channels.owner],
+                        it[Channels.name],
+                        it[Channels.public],
+                        it[Channels.pathURL],
+                        it[Channels.imageURL],
+                        it[Channels.createAt].toString(),
+                        it[Channels.changeAt].toString(),
+                    )
+                )
+            }
+        }
+
+        return partners.toList()
+    }
+
+    override fun getFromUser(user: UUID): List<Channel> {
+        val partners: MutableList<Channel> = mutableListOf()
+
+        transaction {
+            Channels.select { Channels.owner eq user }.map {
+                partners.add(
+                    Channel(
+                        it[Channels.id],
+                        it[Channels.owner],
                         it[Channels.name],
                         it[Channels.public],
                         it[Channels.pathURL],
@@ -42,6 +66,7 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
             Channels.select { Channels.id eq UUID.fromString(uuid) }.map {
                 Channel(
                     it[Channels.id],
+                    it[Channels.owner],
                     it[Channels.name],
                     it[Channels.public],
                     it[Channels.pathURL],
@@ -57,6 +82,7 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
         transaction {
             Channels.insert {
                 it[id] = channel.id
+                it[owner] = channel.owner
                 it[name] = channel.name
                 it[public] = channel.public
                 it[pathURL] = channel.pathURL

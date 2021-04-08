@@ -60,6 +60,7 @@ class SessionPostgresqlDataSource : SessionDataSource {
                     session,
                     Channel(
                         it[Channels.id],
+                        it[Channels.owner],
                         it[Channels.name],
                         it[Channels.public],
                         it[Channels.pathURL],

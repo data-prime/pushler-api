@@ -27,6 +27,7 @@ class NotificationPostgresqlDataSource : NotificationDataSource {
                         row[Notifications.id],
                         Channel(
                             row[Channels.id],
+                            row[Channels.owner],
                             row[Channels.name],
                             row[Channels.public],
                             row[Channels.pathURL],

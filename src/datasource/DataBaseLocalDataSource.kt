@@ -22,7 +22,7 @@ class DataBaseLocalDataSource() : DataBaseDataSource {
         Database.connect(ds)
 
         transaction {
-            SchemaUtils.create(Sessions, Notifications, Channels, Subscriptions, Users)
+            SchemaUtils.createMissingTablesAndColumns(Sessions, Notifications, Channels, Subscriptions, Users)
         }
     }
 
