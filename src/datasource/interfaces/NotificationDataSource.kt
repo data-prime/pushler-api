@@ -11,4 +11,6 @@ interface NotificationDataSource {
 
     fun pushNotification(notification : Notification)
 
+    fun pushMany(notifications: List<Notification>)
+
 }

@@ -548,6 +548,85 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
 
+            post("/channels/{channel}/push_all") {
+                try {
+                    val user = call.principal<User>()!!
+                    val params = call.receive<Parameters>()
+                    val channel = call.parameters["channel"]?.let { channelDataSource.get(it) }
+                    var data : Map<String, String> = mapOf()
+
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "channel not found")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@post
+                    }
+
+                    params["data"]?.let {
+                        if (it.isNotEmpty()) {
+                            data = Gson().fromJson<Map<String, String>>(it, Map::class.java)
+                        }
+                    }
+
+                    var notifications = mutableListOf<Notification>()
+
+                    sessionDataSource.getSubscriber(channel).forEach { subscriber ->
+
+                        val notification = Notification(
+                            sender = channel,
+                            recipient = subscriber.session.id.toString(),
+                            title = params["title"]!!,
+                            body = params["body"]!!,
+                            data = data
+                        )
+
+                        subscriber.session.fcm?.let { token ->
+
+                            val firebaseNotification = com.google.firebase.messaging.Notification.builder()
+                            firebaseNotification
+                                .setTitle(notification.title)
+                                .setBody(notification.body)
+
+                            params["image"]?.let {
+                                firebaseNotification.setImage(it)
+                            }
+
+
+
+                            val message: Message.Builder = Message.builder()
+                                .setToken(token)
+                                .setNotification(firebaseNotification.build())
+
+                            message.putData("action", "default")
+
+                            data.forEach { (key, value) ->
+                                message.putData(key, value)
+                            }
+
+
+                            try {
+                                println("send $token")
+
+                                FirebaseMessaging.getInstance().send(message.build())
+
+                                notifications.add(notification)
+                            } catch (e : Exception) {
+
+                            }
+                        }
+                    }
+
+                    notificationDataSource.pushMany(notifications)
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
             post("/channels/{channel}/push/{session}") {
                 try {
                     val user = call.principal<User>()!!
