@@ -120,6 +120,14 @@ fun Application.module(testing: Boolean = false) {
                     return@post
                 }
                 val user = userDataSource.getByName(params["username"]!!)
+                if (user == null) {
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to "invalid username")),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                    return@post
+                }
                 if (!BCrypt.checkpw(params["password"], user?.hash)) {
                     call.respondText(
                         Gson().toJson(mapOf("result" to false, "error" to "invalid password")),
