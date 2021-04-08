@@ -7,11 +7,8 @@ import com.pushler.datasource.tables.Notifications
 import com.pushler.dto.Channel
 import com.pushler.dto.Notification
 import com.pushler.dto.Session
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 
@@ -82,6 +79,21 @@ class NotificationPostgresqlDataSource : NotificationDataSource {
                 row[data] = notification.data.let { Gson().toJson(it) }
                 row[imageURL] = notification.imageURL
                 row[createAt] = DateTime.parse(notification.createAt)
+            }
+        }
+    }
+
+    override fun pushMany(notifications: List<Notification>) {
+        transaction {
+            Notifications.batchInsert(notifications) { notification ->
+                this[Notifications.id] = notification.id
+                this[Notifications.sender] = notification.sender.id
+                this[Notifications.recipient] = notification.recipient
+                this[Notifications.title] = notification.title
+                this[Notifications.body] = notification.body
+                this[Notifications.data] = notification.data.let { Gson().toJson(it) }
+                this[Notifications.imageURL] = notification.imageURL
+                this[Notifications.createAt] = DateTime.parse(notification.createAt)
             }
         }
     }
