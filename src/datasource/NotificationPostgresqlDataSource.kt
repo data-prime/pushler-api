@@ -87,7 +87,7 @@ class NotificationPostgresqlDataSource : NotificationDataSource {
         transaction {
             Notifications.batchInsert(notifications) { notification ->
                 this[Notifications.id] = notification.id
-                this[Notifications.sender] = notification.sender.id
+                this[Notifications.sender] = notification.sender?.id
                 this[Notifications.recipient] = notification.recipient
                 this[Notifications.title] = notification.title
                 this[Notifications.body] = notification.body
