@@ -19,6 +19,7 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import com.pushler.datasource.*
 import com.pushler.datasource.interfaces.*
+import com.pushler.datasource.tables.Channels
 import com.pushler.dto.*
 import com.pushler.oauth.JwtConfig
 import org.joda.time.DateTime
@@ -170,7 +171,7 @@ fun Application.module(testing: Boolean = false) {
 
                 userDataSource.create(user)
 
-                call.respondText(Gson().toJson(user), ContentType.Application.Json, HttpStatusCode.OK)
+                call.respondText(user.id.toString(), ContentType.Application.Json, HttpStatusCode.OK)
             } catch (e : Exception) {
                 e.printStackTrace()
                 call.respondText(
@@ -240,6 +241,48 @@ fun Application.module(testing: Boolean = false) {
                     channelDataSource.create(channel)
 
                     call.respondText(Gson().toJson(mapOf("result" to true, "uuid" to channel.id.toString())), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+
+            put("/channels") {
+                try {
+                    val params = call.receive<Parameters>()
+
+                    if (params["channelID"].isNullOrBlank() ||
+                        params["name"].isNullOrBlank() && params["imageURL"].isNullOrBlank() &&
+                        params["pathURL"].isNullOrBlank() && params["public"].isNullOrBlank()
+                    ) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@put
+                    }
+
+                    val user = call.principal<User>()!!
+                    var channel = params["channelID"]?.let { channelDataSource.get(it) }
+
+                    if (channel == null || user.id != channel.owner) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "channel not found")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@put
+                    }
+
+                    if (!params["name"].isNullOrBlank()) channel.name = params["name"]!!
+                    if (!params["imageURL"].isNullOrBlank()) channel.imageURL = params["imageURL"]!!
+                    if (!params["pathURL"].isNullOrBlank()) channel.pathURL = params["pathURL"]!!
+                    if (!params["public"].isNullOrBlank()) channel.public = params["public"].toBoolean()
+                    channel.changeAt = DateTime.now().toString()
+
+                    channelDataSource.update(channel)
+                    call.respondText(Gson().toJson(channel), ContentType.Application.Json, HttpStatusCode.OK)
                 } catch (e : Exception) {
                     e.printStackTrace()
                     call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)

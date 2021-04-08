@@ -2,11 +2,11 @@ package com.pushler.datasource
 
 import com.pushler.datasource.interfaces.ChannelDataSource
 import com.pushler.datasource.tables.Channels
+import com.pushler.datasource.tables.Sessions
 import com.pushler.dto.Channel
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import io.ktor.http.*
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import java.util.*
@@ -88,6 +88,18 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
                 it[pathURL] = channel.pathURL
                 it[imageURL] = channel.imageURL
                 it[createAt] = DateTime.parse(channel.createAt)
+                it[changeAt] = DateTime.parse(channel.changeAt)
+            }
+        }
+    }
+
+    override fun update(channel: Channel) {
+        return transaction {
+            Channels.update ({ Channels.id eq channel.id }) {
+                it[name] = channel.name
+                it[public] = channel.public
+                it[pathURL] = channel.pathURL
+                it[imageURL] = channel.imageURL
                 it[changeAt] = DateTime.parse(channel.changeAt)
             }
         }
