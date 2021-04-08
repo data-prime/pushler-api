@@ -6,7 +6,9 @@ import com.pushler.dto.Subscriber
 
 interface SessionDataSource {
 
-    fun create() : Session
+    fun create(deviceName : String?, deviceSystem : String?, appVersion : String?) : Session
+
+    fun updateMeta(session: Session, deviceName : String?, deviceSystem : String?, appVersion : String?)
 
     fun get(uuid: String) : Session?
 

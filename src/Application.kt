@@ -585,6 +585,7 @@ fun Application.module(testing: Boolean = false) {
 
         post("/auth") {
             try {
+                val receive = call.receive<Parameters>()
                 val token = call.request.header("Authorization")
                 var session : Session? = null
 
@@ -597,7 +598,9 @@ fun Application.module(testing: Boolean = false) {
                 }
 
                 if (session == null) {
-                    session = sessionDataSource.create()
+                    session = sessionDataSource.create(receive["deviceName"], receive["deviceSystem"], receive["appVersion"])
+                } else {
+                    sessionDataSource.updateMeta(session!!, receive["deviceName"], receive["deviceSystem"], receive["appVersion"])
                 }
 
                 val newToken = JwtConfig.makeToken(session!!)

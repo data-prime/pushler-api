@@ -18,19 +18,37 @@ import java.util.*
 class SessionPostgresqlDataSource : SessionDataSource {
 
 
-    override fun create(): Session {
+    override fun create(deviceName : String?, deviceSystem : String?, appVersion : String?): Session {
 
-        val session = Session(UUID.randomUUID())
+        val session = Session(UUID.randomUUID(), deviceName = deviceName, deviceSystem = deviceSystem, appVersion = appVersion)
 
         transaction {
             Sessions.insert {
                 it[id] = session.id
                 it[fcm] = session.fcm
+                it[Sessions.deviceName] = session.deviceName
+                it[Sessions.deviceSystem] = session.deviceSystem
+                it[Sessions.appVersion] = session.appVersion
                 it[createAt] = DateTime.now()
                 it[changeAt] = DateTime.now()
             }
         }
         return session
+    }
+
+    override fun updateMeta(
+        session: Session,
+        deviceName: String?,
+        deviceSystem: String?,
+        appVersion: String?
+    ) {
+        transaction {
+            Sessions.update ({ Sessions.id eq session.id }) {
+                it[Sessions.deviceName] = deviceName
+                it[Sessions.deviceSystem] = deviceSystem
+                it[Sessions.appVersion] = appVersion
+            }
+        }
     }
 
     override fun get(uuid: String) : Session? {
@@ -41,6 +59,9 @@ class SessionPostgresqlDataSource : SessionDataSource {
                 session = Session(
                     it[Sessions.id],
                     it[Sessions.fcm],
+                    it[Sessions.deviceName],
+                    it[Sessions.deviceSystem],
+                    it[Sessions.appVersion],
                     it[Sessions.createAt].toString(),
                     it[Sessions.changeAt].toString(),
                 )
@@ -86,6 +107,9 @@ class SessionPostgresqlDataSource : SessionDataSource {
                     Session(
                         it[Sessions.id],
                         it[Sessions.fcm],
+                        it[Sessions.deviceName],
+                        it[Sessions.deviceSystem],
+                        it[Sessions.appVersion],
                         it[Sessions.createAt].toString(),
                         it[Sessions.changeAt].toString(),
                     ),
@@ -108,6 +132,9 @@ class SessionPostgresqlDataSource : SessionDataSource {
                     Session(
                         it[Sessions.id],
                         it[Sessions.fcm],
+                        it[Sessions.deviceName],
+                        it[Sessions.deviceSystem],
+                        it[Sessions.appVersion],
                         it[Sessions.createAt].toString(),
                         it[Sessions.changeAt].toString(),
                     ),
@@ -168,6 +195,9 @@ class SessionPostgresqlDataSource : SessionDataSource {
                     Session(
                         UUID.fromString(result.getString(Sessions.id.name)),
                         result.getString(Sessions.fcm.name),
+                        result.getString(Sessions.deviceName.name),
+                        result.getString(Sessions.deviceSystem.name),
+                        result.getString(Sessions.appVersion.name),
                         result.getDate(Sessions.createAt.name).toString(),
                         result.getDate(Sessions.changeAt.name).toString(),
                     )
