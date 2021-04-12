@@ -212,15 +212,11 @@ class SessionPostgresqlDataSource : SessionDataSource {
 
     override fun insertFCM(fcm: String, session : Session) {
         if (fcm != session.fcm) {
-
             transaction {
-
-                if (session.fcm != null) {
-                    Sessions.select { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }.forEach {
-                        Notifications.deleteWhere { Notifications.recipient eq it[Sessions.id].toString() }
-                    }
-                    Sessions.deleteWhere { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }
+                Sessions.select { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }.forEach {
+                    Notifications.deleteWhere { Notifications.recipient eq it[Sessions.id].toString() }
                 }
+                Sessions.deleteWhere { (Sessions.id neq session.id) and (Sessions.fcm eq fcm) }
 
                 Sessions.update ({ Sessions.id eq session.id }) {
                     it[Sessions.fcm] = fcm
