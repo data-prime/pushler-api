@@ -9,8 +9,8 @@ interface UserDataSource {
     fun getByName(userName : String) : User?
 
     fun get(id : String) : User?
-//
-//    fun update(user : User) : User?
+
+    fun update(user : User) : Int
 //
 //    fun getAll() : List<User>
 //

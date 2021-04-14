@@ -9,8 +9,15 @@ import java.util.*
 
 data class User (
     val id: UUID = UUID.randomUUID(),
-    val name: String,
-    val hash: String,
+    var name: String,
+    @Transient var hash: String,
     val createdAt : String = DateTime.now().toString(),
-    val updatedAt : String = DateTime.now().toString(),
+    var updatedAt : String = DateTime.now().toString(),
 ) : Principal
+
+//data class UserHashless(val user: User) {
+//    val id = user.id
+//    val name = user.name
+//    val createdAt = user.createdAt
+//    val updatedAt = user.updatedAt
+//}

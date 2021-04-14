@@ -183,7 +183,7 @@ fun Application.module(testing: Boolean = false) {
         }
 
         authenticate("userAuth") {
-            get ("/user/test") {
+            get("/user/test") {
                 call.respondText("", ContentType.Application.Json, HttpStatusCode.OK)
             }
 
@@ -213,12 +213,59 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
 
-            delete ("/user/me") {
+            delete("/user/me") {
                 try {
                     val user = call.principal<User>()!!
                     userDataSource.delete(user.id.toString())
                     call.respondText("", ContentType.Application.Json, HttpStatusCode.NoContent)
                 } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                }
+            }
+
+            put("/user") {
+                try {
+                    val params = call.receive<Parameters>()
+
+                    if (params["username"].isNullOrBlank() && params["password"].isNullOrBlank()) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@put
+                    }
+//                    var user = params["id"]?.let { userDataSource.get(it) }
+//                    if (user == null) {
+//                        call.respondText(
+//                            Gson().toJson(mapOf("result" to false, "error" to "user not found")),
+//                            ContentType.Application.Json,
+//                            HttpStatusCode.BadRequest
+//                        )
+//                        return@put
+//                    }
+
+                    val user = call.principal<User>()!!
+                    if (!params["username"].isNullOrBlank()) user.name = params["username"]!!
+                    if (!params["password"].isNullOrBlank()) user.hash = BCrypt.hashpw(
+                        params["password"]!!, BCrypt.gensalt()
+                    )
+                    val res = userDataSource.update(user)
+                    if (res == 0) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "failed to update user")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.InternalServerError
+                        )
+                        return@put
+                    }
+                    call.respondText(Gson().toJson(user), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e: Exception) {
                     e.printStackTrace()
                     call.respondText(
                         Gson().toJson(mapOf("result" to false, "error" to e.toString())),

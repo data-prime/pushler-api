@@ -94,7 +94,7 @@ class ChannelPostgresqlDataSource : ChannelDataSource {
     }
 
     override fun update(channel: Channel) {
-        return transaction {
+        transaction {
             Channels.update ({ Channels.id eq channel.id }) {
                 it[name] = channel.name
                 it[public] = channel.public

@@ -1,12 +1,11 @@
 package com.pushler.datasource
 
 import com.pushler.datasource.interfaces.UserDataSource
+import com.pushler.datasource.tables.Channels
 import com.pushler.datasource.tables.Users
 import com.pushler.dto.User
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import java.util.*
@@ -84,6 +83,16 @@ class UserPostgresqlDataSource : UserDataSource {
     override fun deleteByName(name: String) {
         transaction {
             Users.deleteWhere { Users.name eq name }
+        }
+    }
+
+    override fun update(user : User) : Int {
+        return transaction {
+            return@transaction Users.update({ Users.id eq user.id }) {
+                it[name] = user.name
+                it[hash] = user.hash
+                it[updatedAt] = DateTime.now()
+            }
         }
     }
 }
