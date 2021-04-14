@@ -210,6 +210,21 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
 
+            delete ("/user/me") {
+                try {
+                    val user = call.principal<User>()!!
+                    userDataSource.delete(user.id.toString())
+                    call.respondText("", ContentType.Application.Json, HttpStatusCode.NoContent)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                }
+            }
+
             get("/channels") {
                 try {
                     val user = call.principal<User>()!!
