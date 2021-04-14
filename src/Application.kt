@@ -190,7 +190,11 @@ fun Application.module(testing: Boolean = false) {
             delete("/user") {
                 try {
                     val params = call.receive<Parameters>()
-                    if (params["id"].isNullOrBlank()) {
+                    if (!params["id"].isNullOrBlank()) {
+                        userDataSource.delete(params["id"].toString())
+                    } else if (!params["username"].isNullOrBlank()) {
+                        userDataSource.deleteByName(params["username"].toString())
+                    } else {
                         call.respondText(
                             Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
                             ContentType.Application.Json,
@@ -198,7 +202,6 @@ fun Application.module(testing: Boolean = false) {
                         )
                         return@delete
                     }
-                    userDataSource.delete(params["id"].toString())
                     call.respondText("", ContentType.Application.Json, HttpStatusCode.NoContent)
                 } catch (e : Exception) {
                     e.printStackTrace()

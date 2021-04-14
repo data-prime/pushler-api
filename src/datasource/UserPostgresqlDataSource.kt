@@ -80,4 +80,10 @@ class UserPostgresqlDataSource : UserDataSource {
             Users.deleteWhere { Users.id eq UUID.fromString(uuid) }
         }
     }
+
+    override fun deleteByName(name: String) {
+        transaction {
+            Users.deleteWhere { Users.name eq name }
+        }
+    }
 }

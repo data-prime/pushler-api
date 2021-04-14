@@ -16,4 +16,5 @@ interface UserDataSource {
 //
     fun delete(uuid: String)
 
+    fun deleteByName(name: String)
 }
