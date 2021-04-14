@@ -74,15 +74,15 @@ class UserPostgresqlDataSource : UserDataSource {
         }.firstOrNull()
     }
 
-    override fun delete(uuid: String) {
-        transaction {
-            Users.deleteWhere { Users.id eq UUID.fromString(uuid) }
+    override fun delete(uuid: String): Int {
+        return transaction {
+            return@transaction Users.deleteWhere { Users.id eq UUID.fromString(uuid) }
         }
     }
 
-    override fun deleteByName(name: String) {
-        transaction {
-            Users.deleteWhere { Users.name eq name }
+    override fun deleteByName(name: String): Int {
+        return transaction {
+            return@transaction Users.deleteWhere { Users.name eq name }
         }
     }
 

@@ -190,13 +190,21 @@ fun Application.module(testing: Boolean = false) {
             delete("/user") {
                 try {
                     val params = call.receive<Parameters>()
-                    if (!params["id"].isNullOrBlank()) {
+                    val res = if (!params["id"].isNullOrBlank()) {
                         userDataSource.delete(params["id"].toString())
                     } else if (!params["username"].isNullOrBlank()) {
                         userDataSource.deleteByName(params["username"].toString())
                     } else {
                         call.respondText(
                             Gson().toJson(mapOf("result" to false, "error" to "invalid params")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@delete
+                    }
+                    if (res == 0) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "failed to delete user")),
                             ContentType.Application.Json,
                             HttpStatusCode.BadRequest
                         )
@@ -216,7 +224,15 @@ fun Application.module(testing: Boolean = false) {
             delete("/user/me") {
                 try {
                     val user = call.principal<User>()!!
-                    userDataSource.delete(user.id.toString())
+                    val res = userDataSource.delete(user.id.toString())
+                    if (res == 0) {
+                        call.respondText(
+                            Gson().toJson(mapOf("result" to false, "error" to "failed to delete user")),
+                            ContentType.Application.Json,
+                            HttpStatusCode.BadRequest
+                        )
+                        return@delete
+                    }
                     call.respondText("", ContentType.Application.Json, HttpStatusCode.NoContent)
                 } catch (e : Exception) {
                     e.printStackTrace()
@@ -260,7 +276,7 @@ fun Application.module(testing: Boolean = false) {
                         call.respondText(
                             Gson().toJson(mapOf("result" to false, "error" to "failed to update user")),
                             ContentType.Application.Json,
-                            HttpStatusCode.InternalServerError
+                            HttpStatusCode.BadRequest
                         )
                         return@put
                     }
