@@ -14,10 +14,3 @@ data class User (
     val createdAt : String = DateTime.now().toString(),
     var updatedAt : String = DateTime.now().toString(),
 ) : Principal
-
-//data class UserHashless(val user: User) {
-//    val id = user.id
-//    val name = user.name
-//    val createdAt = user.createdAt
-//    val updatedAt = user.updatedAt
-//}
