@@ -204,6 +204,23 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
 
+            get("/user/all") {
+                try {
+                    call.respondText(
+                        Gson().toJson(userDataSource.getAll()),
+                        ContentType.Application.Json,
+                        HttpStatusCode.OK
+                    )
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(
+                        Gson().toJson(mapOf("result" to false, "error" to e.toString())),
+                        ContentType.Application.Json,
+                        HttpStatusCode.BadRequest
+                    )
+                }
+            }
+
             delete("/user") {
                 try {
                     val params = call.receive<Parameters>()

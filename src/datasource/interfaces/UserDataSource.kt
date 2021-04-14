@@ -11,9 +11,9 @@ interface UserDataSource {
     fun get(id : String) : User?
 
     fun update(user : User) : Int
-//
-//    fun getAll() : List<User>
-//
+
+    fun getAll() : List<User>
+
     fun delete(uuid: String) : Int
 
     fun deleteByName(name: String) : Int

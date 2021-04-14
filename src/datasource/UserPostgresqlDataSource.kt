@@ -1,11 +1,9 @@
 package com.pushler.datasource
 
 import com.pushler.datasource.interfaces.UserDataSource
-import com.pushler.datasource.tables.Channels
 import com.pushler.datasource.tables.Users
 import com.pushler.dto.User
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import java.util.*
@@ -24,27 +22,25 @@ class UserPostgresqlDataSource : UserDataSource {
         }
     }
 
-//    override fun getAll(): List<User> {
-//        val partners: MutableList<User> = mutableListOf()
-//
-//        transaction {
-//            Users.selectAll().map {
-//                partners.add(
-//                    User(
-//                        it[Users.id],
-//                        it[Users.name],
-//                        it[Users.public],
-//                        it[Users.pathURL],
-//                        it[Users.imageURL],
-//                        it[Users.createAt].toString(),
-//                        it[Users.changeAt].toString(),
-//                    )
-//                )
-//            }
-//        }
-//
-//        return partners.toList()
-//    }
+    override fun getAll(): List<User> {
+        val users: MutableList<User> = mutableListOf()
+
+        transaction {
+            Users.selectAll().map {
+                users.add(
+                    User(
+                        it[Users.id],
+                        it[Users.name],
+                        it[Users.hash],
+                        it[Users.createdAt].toString(),
+                        it[Users.updatedAt].toString(),
+                    )
+                )
+            }
+        }
+
+        return users.toList()
+    }
 
     override fun getByName(username: String): User? {
         return  transaction {
