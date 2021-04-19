@@ -895,7 +895,22 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
 
+            get("/sessions") {
+                try {
+//                    val user = call.principal<User>()!!
+//                    if (user.name != "pushler") {
+//                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
+//                        return@get
+//                    }
 
+                    val sessions = sessionDataSource.getAll()
+                    call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)
+
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
         }
 
 
@@ -941,24 +956,6 @@ fun Application.module(testing: Boolean = false) {
                         "error" to e.toString()
                     )
                 ), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
-
-        get("/sessions") {
-            try {
-                val user = call.principal<User>()!!
-
-                if (user.name != "pushler") {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                    return@get
-                }
-
-                val sessions = sessionDataSource.getAll()
-                call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)
-
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
             }
         }
 
