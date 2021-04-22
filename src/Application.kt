@@ -895,14 +895,25 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
 
+            get("/sessions") {
+                try {
+                    val user = call.principal<User>()!!
+
+                    if (user.name != "pushler") {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                        return@get
+                    }
+
+                    val sessions = sessionDataSource.getAll()
+                    call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)
+
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
 
         }
-
-
-        get("/partner/success") {
-
-        }
-
 
         post("/auth") {
             try {
@@ -944,23 +955,7 @@ fun Application.module(testing: Boolean = false) {
             }
         }
 
-        get("/sessions") {
-            try {
-                val user = call.principal<User>()!!
 
-                if (user.name != "pushler") {
-                    call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                    return@get
-                }
-
-                val sessions = sessionDataSource.getAll()
-                call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)
-
-            } catch (e : Exception) {
-                e.printStackTrace()
-                call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
-            }
-        }
 
         authenticate {
             get("/sessions/fetch") {
@@ -1049,6 +1044,50 @@ fun Application.module(testing: Boolean = false) {
 
 
                     sessionDataSource.unsubscribe(session, channel, receive["tag"])
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+        }
+
+        authenticate {
+            put("/sessions/push/{notification}") {
+                try {
+                    val receive = call.receive<Parameters>()
+                    val session = call.principal<Session>()!!
+                    val notificationId = call.parameters["notification"]
+
+                    if (notificationId == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                        return@put
+                    } else {
+                        notificationDataSource.viewedNotifications(notificationId, receive["viewed"]?.toBoolean() == true)
+                    }
+
+                    call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
+                } catch (e : Exception) {
+                    e.printStackTrace()
+                    call.respondText(Gson().toJson(mapOf("result" to false, "error" to e.toString())), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                }
+            }
+        }
+
+        authenticate {
+            delete("/sessions/push/{notification}") {
+                try {
+                    val receive = call.receive<Parameters>()
+                    val session = call.principal<Session>()!!
+                    val notificationId = call.parameters["notification"]
+
+                    if (notificationId == null) {
+                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
+                        return@delete
+                    } else {
+                        notificationDataSource.deleteNotifications(notificationId)
+                    }
+
                     call.respondText(Gson().toJson(mapOf("result" to true)), ContentType.Application.Json, HttpStatusCode.OK)
                 } catch (e : Exception) {
                     e.printStackTrace()

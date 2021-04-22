@@ -7,10 +7,15 @@ import com.pushler.dto.Session
 
 interface NotificationDataSource {
 
+    fun getNotifications(uuid: String) : Notification?
+
     fun getNotifications(sender: Channel, session: Session, recipient: String) : List<Notification>
 
     fun getPushlerNotifications(session: Session) : List<Notification>
 
+    fun deleteNotifications(uuid: String)
+
+    fun viewedNotifications(uuid: String, viewed: Boolean)
 
     fun pushNotification(notification : Notification)
 

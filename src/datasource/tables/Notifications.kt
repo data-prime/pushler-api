@@ -12,8 +12,10 @@ object Notifications : Table() {
     val sender = reference("sender", Channels.id, onDelete = ReferenceOption.CASCADE).nullable()
     val recipient: Column<String> = text("recipient")
     val title: Column<String> = text("title")
+    val viewed: Column<Boolean> = bool("viewed").default(false)
     val body: Column<String?> = text("body").nullable()
     val imageURL: Column<String?> = text("imageURL").nullable()
     val data: Column<String?> = text("data").nullable()
     val createAt: Column<DateTime> = datetime("create_at")
+    val archive: Column<Boolean> = bool("archive").default(false)
 }

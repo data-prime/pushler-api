@@ -8,6 +8,7 @@ data class Notification(
     val sender: Channel?,
     val recipient: String,
     val title: String,
+    val viewed: Boolean = false,
     val body: String? = null,
     val imageURL: String? = null,
     val data: Map<String, String> = mapOf(),
