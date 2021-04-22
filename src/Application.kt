@@ -899,10 +899,10 @@ fun Application.module(testing: Boolean = false) {
                 try {
                     val user = call.principal<User>()!!
 
-                    if (user.name != "pushler") {
-                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
-                        return@get
-                    }
+//                    if (user.name != "pushler") {
+//                        call.respondText(Gson().toJson(mapOf("result" to false)), ContentType.Application.Json, HttpStatusCode.BadRequest)
+//                        return@get
+//                    }
 
                     val sessions = sessionDataSource.getAll()
                     call.respondText(Gson().toJson(mapOf("result" to true, "sessions" to sessions)), ContentType.Application.Json, HttpStatusCode.OK)
