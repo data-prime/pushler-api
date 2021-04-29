@@ -630,13 +630,15 @@ fun Application.module(testing: Boolean = false) {
                                 firebaseNotification.setImage(it)
                             }
 
-
-
                             val message: Message.Builder = Message.builder()
                                 .setToken(token)
                                 .setNotification(firebaseNotification.build())
 
                             message.putData("action", "default")
+ 
+                            message.putData("id", notification.id.toString())
+
+                            message.putData("sender", notification.sender?.id?.toString())
 
                             data.forEach { (key, value) ->
                                 message.putData(key, value)
@@ -644,8 +646,6 @@ fun Application.module(testing: Boolean = false) {
 
 
                             try {
-                                println("send $token")
-
                                 FirebaseMessaging.getInstance().send(message.build())
                             } catch (e : Exception) {
 
@@ -706,6 +706,10 @@ fun Application.module(testing: Boolean = false) {
                                 .setNotification(firebaseNotification.build())
 
                             message.putData("action", "default")
+
+                            message.putData("id", notification.id.toString())
+
+                            message.putData("sender", notification.sender?.id?.toString())
 
                             data.forEach { (key, value) ->
                                 message.putData(key, value)
@@ -790,6 +794,10 @@ fun Application.module(testing: Boolean = false) {
 
                             message.putData("action", "default")
 
+                            message.putData("id", notification.id.toString())
+
+                            message.putData("sender", notification.sender?.id?.toString())
+
                             data.forEach { (key, value) ->
                                 message.putData(key, value)
                             }
@@ -867,6 +875,10 @@ fun Application.module(testing: Boolean = false) {
                                     .setNotification(firebaseNotification.build())
 
                                 message.putData("action", "default")
+
+                                message.putData("id", notification.id.toString())
+
+                                message.putData("sender", notification.sender?.id?.toString())
 
                                 data.forEach { (key, value) ->
                                     message.putData(key, value)
