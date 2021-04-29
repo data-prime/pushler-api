@@ -640,6 +640,8 @@ fun Application.module(testing: Boolean = false) {
 
                             message.putData("sender", notification.sender?.id?.toString())
 
+                            message.putData("createAt", notification.createAt)
+
                             data.forEach { (key, value) ->
                                 message.putData(key, value)
                             }
@@ -710,6 +712,8 @@ fun Application.module(testing: Boolean = false) {
                             message.putData("id", notification.id.toString())
 
                             message.putData("sender", notification.sender?.id?.toString())
+
+                            message.putData("createAt", notification.createAt)
 
                             data.forEach { (key, value) ->
                                 message.putData(key, value)
@@ -798,6 +802,8 @@ fun Application.module(testing: Boolean = false) {
 
                             message.putData("sender", notification.sender?.id?.toString())
 
+                            message.putData("createAt", notification.createAt)
+
                             data.forEach { (key, value) ->
                                 message.putData(key, value)
                             }
@@ -879,6 +885,8 @@ fun Application.module(testing: Boolean = false) {
                                 message.putData("id", notification.id.toString())
 
                                 message.putData("sender", notification.sender?.id?.toString())
+
+                                message.putData("createAt", notification.createAt)
 
                                 data.forEach { (key, value) ->
                                     message.putData(key, value)
